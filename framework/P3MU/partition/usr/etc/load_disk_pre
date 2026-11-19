@@ -1,0 +1,12 @@
+#! /bin/sh
+
+DEV_NAME=$1
+DEV_HWID=$2
+
+echo "------------load disk pre---------------"
+
+insmod powerctl.ko interval_times=15
+
+# Setting Swap Partition Tendency
+echo 1 > /proc/sys/vm/swappiness
+

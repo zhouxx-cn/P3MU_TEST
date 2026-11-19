@@ -1,0 +1,113 @@
+#!/bin/sh
+
+LOCKFILE="/tmp/netfilter.lock1"
+IPT=/usr/sbin/xtables-multi
+IPSET=/usr/sbin/ipset
+STRICT_FILE=/usr/etc/iptables/iptables.strict
+DENY_FILE=/mnt/mtd/etc/iptables/iptables.deny
+ALLOW_FILE=/mnt/mtd/etc/iptables/iptables.allow
+PORTS_FILE=/mnt/mtd/etc/iptables/iptables.ports
+PORTS_ACTION=ACCEPT
+
+{
+if ! flock -n 4; then
+echo "Shell is running, exit"
+exit 1
+fi
+
+#开启内核参数
+echo 1 > /proc/sys/net/ipv4/ip_forward
+if [ -f "/proc/sys/net/ipv4/tcp_syncookies" ] ; then
+	echo 0 > /proc/sys/net/ipv4/tcp_syncookies
+fi
+for i in /proc/sys/net/ipv4/conf/*/rp_filter; do
+	echo "0" > $i
+done
+#for i in /proc/sys/net/ipv4/conf/*/log_martians; do
+#	echo "1" > $i
+#done
+echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+for i in /proc/sys/net/ipv4/conf/*/send_redirects; do
+	echo "0" > $i
+done
+
+#清除规则
+$IPT iptables -F
+$IPT iptables -X
+$IPT iptables -Z
+
+#预定义策略
+$IPT iptables -P INPUT DROP # 默认是拒绝访问
+$IPT iptables -P OUTPUT  ACCEPT
+$IPT iptables -P FORWARD ACCEPT
+$IPT iptables -A INPUT -i lo -j ACCEPT  # 允许回环接口可以被访问
+$IPT iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+$IPT iptables -A INPUT -m pkttype --pkt-type multicast -j ACCEPT # 允许组播
+
+#高级规则
+strict=$1
+if [ "$strict" == "strict" ]; then
+  echo "used strict"
+  sh ${STRICT_FILE}
+fi
+
+#黑名单
+if [ -f "$DENY_FILE" ]; then
+  cat $DENY_FILE | while read line
+  do
+    type=`echo $line | cut -d "," -f 1`
+    addr=`echo $line | cut -d "," -f 2`
+    if [ "$type" == "IP" ]; then
+      #echo "${type} ${addr}"
+      $IPT iptables -A INPUT -s ${addr} -j DROP
+    elif [ "$type" == "MAC" ]; then
+      #echo "${type} ${addr}"
+      $IPT iptables -A INPUT -m mac --mac-source ${addr} -j DROP
+    elif [ "$type" == "IPSEG" ]; then
+      $IPT iptables -A INPUT -m iprange --src-range ${addr} -j DROP
+    fi
+  done
+fi
+
+#白名单(原则上不能与黑名单同时存在)
+if [ -f "$ALLOW_FILE" ]; then
+  PORTS_ACTION=whitelist
+  $IPT iptables -N ${PORTS_ACTION}
+  cat $ALLOW_FILE | while read line
+  do
+    type=`echo $line | cut -d "," -f 1`
+    addr=`echo $line | cut -d "," -f 2`
+    if [ "$type" == "IP" ]; then
+      #echo "${type} ${addr}"
+      $IPT iptables -A ${PORTS_ACTION} -s ${addr} -j ACCEPT
+    elif [ "$type" == "MAC" ]; then
+      #echo "${type} ${addr}"
+      $IPT iptables -A ${PORTS_ACTION} -m mac --mac-source ${addr} -j ACCEPT
+    elif [ "$type" == "IPSEG" ]; then
+      $IPT iptables -A ${PORTS_ACTION} -m iprange --src-range ${addr} -j ACCEPT
+    elif [ "$type" == "IF" ]; then
+      #echo "${type} ${addr}"
+      $IPT iptables -A INPUT -i ${addr} -j ACCEPT
+    fi
+  done
+fi
+
+#是否允许ping
+$IPT iptables -A INPUT -p icmp -j ${PORTS_ACTION}
+
+#允许的本机服务
+if [ -f "$PORTS_FILE" ] ; then
+  cat $PORTS_FILE | while read line
+  do
+    protocal=`echo $line | cut -d "," -f 1`
+    port=`echo $line | cut -d "," -f 2`
+    dir=`echo $line | cut -d "," -f 3`
+    if [ "$dir" == "S" ]; then
+    	$IPT iptables -A INPUT -p $protocal --sport $port -j ${PORTS_ACTION}
+    else
+    	$IPT iptables -A INPUT -p $protocal --dport $port -j ${PORTS_ACTION}
+    fi
+  done
+fi
+} 4<>$LOCKFILE

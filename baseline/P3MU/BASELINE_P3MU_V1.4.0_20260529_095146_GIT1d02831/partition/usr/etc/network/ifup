@@ -1,0 +1,53 @@
+#!/bin/sh
+
+CONFIG=${1}
+CONFIG_FILE=ifcfg-${CONFIG}
+
+# load interface config file
+if [ ! -f /etc/network/${CONFIG_FILE} ]; then
+  echo "not search ${CONFIG_FILE} file"
+  exit 1;
+fi
+. /etc/network/${CONFIG_FILE}
+
+# check root user priority
+if [ "$USER" != "root" ]; then
+  echo "only the root can start the device ${CONFIG}"
+  exit 1;
+fi
+
+if [ "${BOOTPROTO}" = "dhcp" ] && [ "${CONFIG}" != "lo" ]; then
+  if [ -n "${HWADDR}" ]; then
+    ifconfig ${CONFIG} hw ether ${HWADDR}
+  fi
+  if [ -n "${MTU}" ]; then
+    ifconfig ${CONFIG} mtu ${MTU}
+  fi
+  ps | grep "udhcpc" | grep -v "grep" | awk '{printf("kill -9 %s\n",$1)}' | sh
+  udhcpc -i ${CONFIG} -b -s /etc/init.d/udhcpc.default
+else
+  ps | grep "udhcpc" | grep -v "grep" | awk '{printf("kill -9 %s\n",$1)}' | sh
+  if [ -n "${HWADDR}" ]; then
+    ifconfig ${CONFIG} hw ether ${HWADDR}
+  fi
+  if [ -n "${MTU}" ]; then
+    ifconfig ${CONFIG} mtu ${MTU}
+  fi
+  if [ -n "${IPADDR}" ]; then
+    ifconfig ${CONFIG} ${IPADDR}
+  fi
+  if [ -n "${NETMASK}" ]; then
+    ifconfig ${CONFIG} netmask ${NETMASK}
+  fi
+  if [ -n "${BROADCAST}" ]; then
+    ifconfig ${CONFIG} broadcast ${BROADCAST}
+  fi
+  if [ -n "${GATEWAY}" ] && [ -n "${DEFAULT}" ]; then
+    DEFRT=`ip route list | awk '/^default / { print $5 }'`
+    if [ "${DEFRT}" != "ppp0" ] && [ "${DEFAULT}" == "yes" ]; then
+      route add default gw ${GATEWAY} dev ${CONFIG}
+    fi
+  fi
+fi
+
+exit 0

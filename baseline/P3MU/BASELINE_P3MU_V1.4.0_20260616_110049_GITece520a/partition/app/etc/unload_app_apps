@@ -1,0 +1,8 @@
+#! /bin/sh
+
+echo "------------unload app apps begin-------------"
+
+DEV_NAME=$1
+DEV_HWID=$2
+
+echo "------------unload app apps end---------------"

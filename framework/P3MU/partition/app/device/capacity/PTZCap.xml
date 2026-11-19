@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Channel ChannelID="0">
+  <Support>true</Support>
+  <IgnoreShakingHead>true</IgnoreShakingHead>
+  <PanTile>
+    <UpDown>
+      <Support>true</Support>
+    </UpDown>
+    <LeftRight>
+      <Support>true</Support>
+    </LeftRight>
+    <Extend>
+      <Support>false</Support>
+    </Extend>
+    <OneStep>
+      <Support>false</Support>
+    </OneStep>
+  </PanTile>
+
+  <Zoom>
+    <Support>true</Support>
+    <AFTrack>
+      <Support>false</Support>
+    </AFTrack>
+  </Zoom>
+
+  <Focus>
+    <Support>false</Support>
+  </Focus>
+
+  <Aperture>
+    <Support>false</Support>
+  </Aperture>
+
+  <Preset>
+    <Support>true</Support>
+    <Count>6</Count>
+  </Preset>
+
+  <Cruise>
+    <Support>true</Support>
+    <Count>16</Count>
+  </Cruise>
+
+  <Track>
+    <Support>false</Support>
+    <Count>10</Count>
+  </Track>
+
+  <AutoScan>
+    <Support>false</Support>
+  </AutoScan>
+
+  <Guard>
+    <Support>true</Support>
+    <Version>2</Version>
+  </Guard>
+
+  <AuxControl>
+    <Support>false</Support>
+    <Light>
+      <Support>false</Support>
+    </Light>
+
+    <Wipe>
+      <Support>false</Support>
+    </Wipe>
+
+    <Fan>
+      <Support>false</Support>
+    </Fan>
+
+    <Heat>
+      <Support>false</Support>
+    </Heat>
+
+    <Power>
+      <Support>false</Support>
+    </Power>
+
+    <Menu>
+      <Support>false</Support>
+    </Menu>
+
+  </AuxControl>
+</Channel>

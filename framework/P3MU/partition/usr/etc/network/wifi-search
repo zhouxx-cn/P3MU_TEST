@@ -1,0 +1,48 @@
+#!/bin/sh
+
+CONFIG=${1}
+WCLI=/usr/sbin/wpa_cli
+
+# check root user priority
+if [ "$USER" != "root" ] ; then
+   echo "only the root can down the device ${CONFIG}"
+   exit 1
+fi
+
+has_wpa_supplicant()
+{
+   pid=`ps | grep wpa.conf | awk '/wpa_supplicant/{print $1}'`
+   if [ -z $pid ] ; then
+      return 1
+   else
+      return 0
+   fi
+}
+
+#check available
+is_available ()
+{
+  LC_ALL= LANG= ip -o link | grep -q $1 && return 0 || return 1
+}
+
+if has_wpa_supplicant ; then
+   echo "wpa_supplicant is running."
+else
+   echo "wpa_supplicant is closed."
+   is_available ${CONFIG} || exit 1
+   ifconfig ${CONFIG} up
+   cp -f /mnt/mtd/etc/wifi/wpa.conf /tmp/
+   if [ "${CONFIG}" == "ra0" ] ; then
+      echo "ra0"
+      /usr/sbin/wpa_supplicant -B -i${CONFIG} -c/tmp/wpa.conf -Dwext
+   else
+      /usr/sbin/wpa_supplicant -B -i${CONFIG} -c/tmp/wpa.conf -Dnl80211
+   fi
+   sleep 1
+fi
+
+${WCLI} scan
+$WCLI scan_result > /tmp/wifi_scan_result
+
+echo "finished."
+exit 0

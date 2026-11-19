@@ -1,0 +1,5 @@
+# PARTITION	UPGRADE-TYPE	FILE	DST
+UBOOT		erasure	..//partition/u-boot.bin 	UBOOT
+ENV		erasure	..//partition/tmp/env.bin		ENV
+ROOTFS	erasure	..//partition/tmp/rootfs.rsca.squashfs	ROOTFS
+DATA		erasure	..//partition/tmp/data.rsca.jffs2	DATA

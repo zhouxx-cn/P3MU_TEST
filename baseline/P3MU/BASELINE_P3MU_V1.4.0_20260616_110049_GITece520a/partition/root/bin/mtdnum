@@ -1,0 +1,7 @@
+mtdname=$1
+mtdnum=`cat /proc/mtd | awk /${mtdname}/'{print $1}' | awk -F: '{print $1}' | cut -c4-`
+if [ x$mtdnum == x ]; then
+	echo 'NULL'
+else
+	echo $mtdnum
+fi

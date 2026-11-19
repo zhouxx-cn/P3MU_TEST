@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Device>
+	<AlarmOutCount>0</AlarmOutCount> 
+	<AlarmInCount>0</AlarmInCount> 
+	<FunctionList> 
+		<Function>TwoWayAudio</Function> 
+		<Function>Email</Function> 
+		<Function>RemoteReboot</Function> 
+		<Function>Restore</Function> 
+		<Function>PasswordModify</Function> 
+	</FunctionList>
+	<FunctionListAboutChannel> 
+		<ChannelList> 
+			<Channel ChannelID="0">  
+				<Function>Audio</Function> 
+				<Function>Ptz</Function> 
+				<Function>Motion</Function> 
+			</Channel> 
+		</ChannelList> 
+	</FunctionListAboutChannel> 
+ </Device>   
+    
+    

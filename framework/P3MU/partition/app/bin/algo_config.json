@@ -1,0 +1,104 @@
+{
+    "body_detect":
+    {
+        "min_width": 0,
+        "min_height": 0,
+        "quality": 20
+    },
+    "face_detect":
+    {
+        "min_width": 0,
+        "min_height": 0,
+        "face_pose":
+        {
+            "pitch": 180,
+            "yaw":   180,
+            "roll":  180,
+            "blur":  0.99
+        }
+    },
+    "face_capture":
+    {
+        "min_width": 0,
+        "min_height": 0,
+        "quality": 20,
+        "face_pose":
+        {
+            "pitch": 180,
+            "yaw":   180,
+            "roll":  180,
+            "blur":  0.99
+        }
+    },
+    "face_push":
+    {
+        "min_width": 0,
+        "min_height": 0,
+        "quality": 20,
+        "push_mode": 2,
+        "interval_times": 2000,
+        "push_counts": 10,
+        "frame_cache_depth": 15.0,
+        "face_pose":
+        {
+            "pitch": 180,
+            "yaw":   180,
+            "roll":  180,
+            "blur":  0.99
+        },
+        "crop_config":
+        {
+            "scale_left": 0.5,
+            "scale_right": 0.5,
+            "scale_top": 0.5,
+            "scale_bottom": 0.5,
+            "jpeg_quality": 20.0,
+            "jpeg_qplevel": 5.0
+        },
+        "panorama_config":
+        {
+            "width": 1920,
+            "height": 1080,
+            "jpeg_quality": 20.0,
+            "jpeg_qplevel": 5.0
+        }
+    },
+    "plate_detect":
+    {
+        "min_width": 0,
+        "min_height": 0,
+        "quality": 30
+    },
+    "plate_capture":
+    {
+        "min_width": 0,
+        "min_height": 0,
+        "quality": 30
+    },
+    "plate_push":
+    {
+        "min_width": 40,
+        "min_height": 40,
+        "quality": 30,
+        "push_mode": 2,
+        "interval_times": 60000,
+        "push_counts": 1,
+        "frame_cache_depth": 15.0,
+        "crop_config":
+        {
+            "scale_left": 0.5,
+            "scale_right": 0.5,
+            "scale_top": 0.5,
+            "scale_bottom": 0.5,
+            "jpeg_quality": 94.0,
+            "jpeg_qplevel": 8.0
+        },
+        "panorama_config":
+        {
+            "width": 1920,
+            "height": 1080,
+            "jpeg_quality": 60.0,
+            "jpeg_qplevel": 6.0
+        }
+    }
+}

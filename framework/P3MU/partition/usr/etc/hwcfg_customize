@@ -1,0 +1,56 @@
+#! /bin/sh
+
+dev_name=$1
+dev_hwid=$2
+
+echo "------------hwcfg customize---------------"
+PROC_HWCFG=/proc/xrs/hwconf
+
+hwcfgfile=hw.cfg
+if [ "$dev_hwid"x != "-1"x ]; then
+	hwcfgfile=hw$dev_hwid.cfg
+fi
+
+customize_alarm_out0()
+{
+    need_custom=false
+    pin=-1;trig=-1;dir=-1;init=-1
+
+    alarm_out0_type_str=`cat $hwcfgfile | grep alarm_out0_type`
+    if [ $? -eq 0 ]; then
+        alarm_out0_type=$(echo "$alarm_out0_type_str" | cut -d '=' -f 2)
+        if [ $alarm_out0_type -eq 0 ]; then
+            alarm_gpio_out0_str=`cat $hwcfgfile | grep alarm_gpio_out0`
+            alarm_gpio_out0=$(echo "$alarm_gpio_out0_str" | cut -d '=' -f 2)
+            pin=$(echo "$alarm_gpio_out0" | cut -d ',' -f 1)
+            trig=$(echo "$alarm_gpio_out0" | cut -d ',' -f 2)
+            dir=$(echo "$alarm_gpio_out0" | cut -d ',' -f 3)
+            init=$(echo "$alarm_gpio_out0" | cut -d ',' -f 4)
+        else
+            echo "only support custom gpio alarm-out."
+            return 1
+        fi
+    else
+        echo "unsupport alarm ctrl type."
+        return 1
+    fi
+
+    # custom
+    alarm_out0_level_str=`fw_printenv hwcfg_alarm_out0_level 2>/dev/null`
+    if [ $? -eq 0 ]; then
+        trig=$(echo "$alarm_out0_level_str" | cut -d '=' -f 2)
+        need_custom=true
+    fi
+    alarm_out0_init_str=`fw_printenv hwcfg_alarm_out0_init 2>/dev/null`
+    if [ $? -eq 0 ]; then
+        init=$(echo "$alarm_out0_init_str" | cut -d '=' -f 2)
+        need_custom=true
+    fi
+
+    if [ $need_custom ]; then
+        echo "alarm_gpio_out0 $pin,$trig,$dir,$init" > $PROC_HWCFG
+    fi
+}
+
+#main
+customize_alarm_out0

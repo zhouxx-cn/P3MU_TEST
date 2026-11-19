@@ -1,0 +1,56 @@
+#! /bin/sh
+
+/bin/mount -a
+
+mkdir /dev/pts /dev/tmp /dev/shm
+mount -t devpts devpts /dev/pts
+mount -t tmpfs tmpfs /dev/shm
+
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+mdev -s
+
+if [ -e /bin/udevd ]; then
+	udevd --daemon
+fi
+
+mount -t tmpfs tmpfs /mnt
+mkdir /mnt/mtd
+mkdir /mnt/logo
+mkdir /mnt/speech
+
+mount -t tmpfs tmpfs /var
+mkdir /var/run
+mkdir /var/lock
+
+# Avoid modules error message
+mkdir -p /tmp/modules/`uname -r`
+
+#if grep -q debug /proc/cmdline; then
+#	echo 'cmdline debug flag is set, entering debug mode'
+#	exit 1
+#fi
+
+for initscript in /etc/init.d/R[0-9][0-9]*; do
+	if [ -x $initscript ]; then
+		echo "[RCS]: $initscript"
+		$initscript
+	fi
+done
+
+#/etc/init.d/Dir_Ful_Check &
+
+# load modules and start application
+if [ -f "/mnt/mtd/dis_loadmodules" ]; then
+	if [ -x "/mnt/mtd/dis_loadmodules" ]; then
+		/mnt/mtd/dis_loadmodules
+	else
+		echo "dis_loadmodules"
+	fi
+elif grep -q nomodules /proc/cmdline; then
+	echo 'cmdline nomodules flag is set, do not load modules'
+else
+	/usr/etc/load_modules &
+fi
+
+wait
+mdev -s

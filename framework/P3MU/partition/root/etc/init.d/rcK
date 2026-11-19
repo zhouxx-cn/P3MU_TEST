@@ -1,0 +1,13 @@
+#! /bin/sh
+
+# load modules and start application
+if [ -f "/mnt/mtd/dis_unloadmodules" ]; then
+	if [ -x "/mnt/mtd/dis_unloadmodules" ]; then
+		/mnt/mtd/dis_unloadmodules
+	else
+		echo "dis_unloadmodules"
+	fi
+else
+	/usr/etc/unload_modules
+fi
+

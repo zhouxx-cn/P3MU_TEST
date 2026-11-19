@@ -1,0 +1,210 @@
+#!/bin/sh
+
+source /etc/profile
+
+dev_name=
+dev_hwid=
+snr_name=
+
+find_devid()
+{
+	PROC_DEVINFO=/proc/xrs/devinfo
+	dev_hwid=`cat $PROC_DEVINFO | grep HWID: | awk '{print $2}'`
+	dev_quick_start=`cat $PROC_DEVINFO | grep quick_start: | awk '{print $2}'`
+	echo "dev_hwid: "$dev_hwid "quick_start: "$dev_quick_start
+	export DEV_QUICK_START=$dev_quick_start
+}
+
+find_devtype()
+{
+	PROC_HWCONF=/proc/xrs/hwconf
+	dev_name=`cat $PROC_HWCONF | grep BOARD: | awk '{print $2}'`
+	snr_name=`cat $PROC_HWCONF | grep SENSOR: | awk '{print $2}'`
+	echo "dev_name: "$dev_name "snr_name: "$snr_name
+}
+
+check_devinfo()
+{
+	DEVINFO_VER=/mnt/app/device/DeviceVersion.ini
+	DEVINFO_LIST=/mnt/app/device/DeviceType.txt
+	ENV_BOARD_TYPE=boardtype
+	ENV_BOARD_VER=boardver
+
+	major=`readini $DEVINFO_VER Software Major_version`
+	minor=`readini $DEVINFO_VER Software Minor_version`
+	rever=`readini $DEVINFO_VER Software Reversion`
+	date=`readini $DEVINFO_VER Software BuildDate`
+
+	version=V${major}.${minor}.${rever}_${date}
+	devtype=` head -n 1 $DEVINFO_LIST | cut -b 6-`
+
+	# if [ "`fw_printenv $ENV_BOARD_TYPE | awk -F= '{print $2}'`"x != "$devtype"x ]; then
+	# 		fw_setenv $ENV_BOARD_TYPE $devtype
+	# 		echo "Set $ENV_BOARD_TYPE $devtype"
+	# fi
+
+	if [ "`fw_printenv $ENV_BOARD_TYPE`"x == ""x ]; then
+			fw_setenv $ENV_BOARD_TYPE $devtype
+			echo "Set $ENV_BOARD_TYPE $devtype"
+	fi
+
+	if [ "`fw_printenv $ENV_BOARD_VER | awk -F= '{print $2}'`"x != "$version"x ]; then
+			fw_setenv $ENV_BOARD_VER $version
+			echo "Set $ENV_BOARD_VER $version"
+	fi
+}
+
+load_diff_modules()
+{
+	case $dev_name in
+	T4)
+		;;
+	*)
+		i=1
+		while [ $i -le 3 ]; do
+			echo "load diff modules, unsupported dev_name: "$dev_name > /dev/kmsg
+			sleep 1
+			let i+=1
+		done
+		;;
+	esac
+}
+
+
+if [ $DEV_QUICK_START -eq 0 ]; then
+	echo "------------load modules begin---------------"
+fi
+
+### dropcache first
+echo 3 > /proc/sys/vm/drop_caches
+
+# step 1: run systemd
+mkdir -p /tmp/app/bin/
+cp /usr/bin/systemd /tmp/app/bin/
+/tmp/app/bin/systemd &
+
+# step 1: get device type
+cd /usr/ko
+
+#if [ -e ot_spi_st7789.ko ]; then
+#	insmod ot_spi_st7789.ko logofile=logo.bin logowidth=140 logoheight=45
+#fi
+
+if [ -e ot_spi_dma_transfer.ko ]; then
+    insmod ot_spi_dma_transfer.ko
+fi
+
+if [ -e ot_adc.ko ]; then
+	insmod ot_adc.ko
+fi
+# Load devinfo fist
+/usr/etc/load_devinfo
+find_devid
+check_devinfo
+
+#insmod debugs_drv.ko
+if [ "$dev_hwid"x == "-1"x ]; then
+	insmod hwconf.ko hwcfgfile=hw.cfg
+else
+	insmod hwconf.ko hwcfgfile=hw$dev_hwid.cfg
+fi
+
+find_devtype
+
+# hwconf customize by env
+/usr/etc/hwcfg_customize $dev_name $dev_hwid
+
+insmod gpioctrl.ko
+insmod aes.ko
+
+if [ -e htr33351.ko ]; then
+	echo "use htr33351 chip"
+	insmod htr33351.ko
+fi
+if [ -e he2866.ko ]; then
+	echo "use he2866 chip"
+	insmod he2866.ko
+fi
+if [ -e mx2208a.ko ]; then
+	echo "use mx2208a chip"
+	insmod mx2208a.ko
+fi
+
+insmod misc.ko
+insmod alarm.ko
+#insmod buzzer.ko
+#insmod watchdog.ko
+
+insmod expwm.ko
+insmod light.ko
+#insmod wiegand.ko
+#insmod door_relay.ko
+#insmod ch34x_pis.ko
+
+motor_support=`cat /proc/xrs/hwconf | grep motor_support | awk '{print $2}'`
+if [ ${motor_support} == 1 ]; then
+	insmod motor.ko
+fi
+
+if [ -e tsensor.ko ]; then
+	insmod tsensor.ko
+fi
+
+#load_diff_modules
+
+# step 2: load video modules
+#for load_media in /usr/etc/load_media_*; do
+#	if [ -x $load_media ]; then
+#		echo "[RCS]: $load_media"
+#		$load_media $dev_name $dev_hwid
+#	fi
+#done
+/usr/etc/load_media $dev_name $dev_hwid
+
+# step 3: load net modules
+#for load_net in /usr/etc/load_net_*; do
+#	if [ -x $load_net ]; then
+#		echo "[RCS]: $load_net"
+#		$load_net $dev_name $dev_hwid
+#	fi
+#done
+/usr/etc/load_net_t41n $dev_name $dev_hwid
+
+zram_en=`cat /proc/xrs/hwconf | grep zram_en | awk '{print $2}'`
+zram_size=`cat /proc/xrs/hwconf | grep zram_size | awk '{print $2}'`
+zram_swappiness=`cat /proc/xrs/hwconf | grep zram_swappiness | awk '{print $2}'`
+if [ -e /dev/zram0 ] && [ $zram_en == 1 ]; then
+	echo ${zram_size}M > /sys/block/zram0/disksize
+	echo ${zram_size}M > /sys/block/zram0/mem_limit
+	echo ${zram_swappiness} > /proc/sys/vm/swappiness
+	mkswap /dev/zram0
+	swapon /dev/zram0
+fi
+
+# step 4: load other modules
+#/usr/etc/load_other $dev_name $dev_hwid
+
+# step 5: wait load finish! load disk and apps together.
+# wait
+
+# step 6: load disk modules
+#/usr/etc/load_disk_pre $dev_name $dev_hwid
+#/usr/etc/load_disk $dev_name $dev_hwid &
+
+# step 7: load apps
+/usr/etc/load_apps $dev_name $dev_hwid
+
+# step 8: load platform specific drivers
+#for load_other_m in /usr/etc/load_other_*; do
+#	if [ -x $load_other_m ]; then
+#		echo "[RCS]: $load_other_m"
+#		$load_other_m $dev_name $dev_hwid $snr_name
+#	fi
+#done
+
+if [ $DEV_QUICK_START -eq 0 ]; then
+	echo "------------load modules end---------------"
+fi
+# Set system time from hardware clock
+#hwclock -s -f /dev/rtc0
+

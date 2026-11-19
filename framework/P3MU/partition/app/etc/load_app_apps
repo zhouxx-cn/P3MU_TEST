@@ -1,0 +1,193 @@
+#! /bin/sh
+
+SYS_TIME_CFG="/mnt/mtd/config/system_time.cfg"
+if [ -f ${SYS_TIME_CFG} ]; then
+    cat ${SYS_TIME_CFG} | xargs date
+    #echo "set last time `cat ${SYS_TIME_CFG}` to device!"
+else
+    echo "${SYS_TIME_CFG} not exist!"
+fi
+
+#hwclock -s
+LOCALTIME=`date | awk '{print $6}'`
+if [ $LOCALTIME \< 2026 ]
+then
+        #echo "reset system time"
+        date 2026.01.01-00:00
+#       hwclock -w &
+fi
+#hwclock --systohc &
+
+#echo "[XRS] Load APP..."
+
+#echo "Use vm swappiness!!!"
+#echo 100 > /proc/sys/vm/swappiness;
+#echo 7340032 > /sys/block/zram0/disksize;
+#mkswap /dev/zram0;
+#swapon /dev/zram0;
+
+#mdev -s
+ulimit -s 2048
+
+APP_MNT_PATH="/mnt/app"
+APP_RW_PATH="/tmp/app"
+WEB_MNT_PATH="/mnt/web"
+DBG_FLAG_FILE="/mnt/mtd/en_debug_mode"
+CORE_FLAG_FILE="/mnt/mtd/en_coredump"
+
+# http目录需要是可读写
+mkdir /tmp/home
+mount /tmp/home /home
+mkdir /home/http
+ln -s /mnt/web/http/* /home/http/
+
+# 环境
+mkdir /mnt/mtd/AlgoAuth
+export HASPUSER_PREFIX=/mnt/mtd/AlgoAuth
+# mkdir /mnt/mtd/model
+# mkdir /storage/db
+
+# APP一些特殊的目录处理
+mkdir -p $APP_RW_PATH/device/capacity
+cp $APP_MNT_PATH/device/capacity/DeviceCap.xml $APP_RW_PATH/device/capacity/
+cp $APP_MNT_PATH/device/capacity/LightCap.xml $APP_RW_PATH/device/capacity/
+cp $APP_MNT_PATH/device/capacity/AICap.xml $APP_RW_PATH/device/capacity/
+cp $APP_MNT_PATH/device/capacity/PTZCap.xml $APP_RW_PATH/device/capacity/
+
+# 点阵文件目录,[TODO 是不是可以去掉]
+mkdir -p $APP_RW_PATH/res
+
+# SD卡挂载目录
+mkdir -p $APP_RW_PATH/disk/mmcblk0p1
+
+# 升级临时文件夹
+mkdir -p $APP_RW_PATH/upgrade
+
+# 一些文件缓存分区
+mkdir -p /tmp/video/
+mkdir -p /tmp/picture/
+mkdir -p /tmp/picture/pic_for_email
+mkdir -p /tmp/picture/pic_for_sd
+mkdir -p /tmp/picture/pic_for_ftp
+mkdir -p /tmp/picture/pic_for_mem
+
+# 系统配置
+echo 1 > /proc/sys/vm/dirty_ratio
+echo 1 > /proc/sys/vm/dirty_background_ratio
+echo 100 > /proc/sys/vm/dirty_expire_centisecs
+echo 50 > /proc/sys/vm/dirty_writeback_centisecs
+echo 1024 > /proc/sys/vm/min_free_kbytes
+echo 1 > /proc/sys/vm/overcommit_memory
+
+#oom调试
+echo 0 > /proc/sys/vm/watermark_boost_factor
+#echo 1536 > /proc/sys/vm/min_free_kbytes
+
+# 配置分区检查
+echo "[XRS][Config] Check Config Files"
+/mnt/app/scripts/checkConfig.sh
+
+# 加载网络
+/mnt/app/etc/load_net
+
+#DHCPC续租
+echo 1 > /proc/sys/net/ipv4/conf/all/arp_ignore
+
+# 音频通路配置
+#echo "[XRS][Audio] Audio Config"
+#tinymix set 33 1
+#tinymix set 32 4
+#tinymix set 25 174
+
+# 硬件相关配置
+#echo "[XRS][HW] GPIO Config"
+
+#一键呼叫按键配置，hw.cfg中默认为双GPIO按键，如果配置文件中KeyToCallType不为0，需要在此处改为单ADC接口
+KEY_TO_CALL_TYPE=$(awk -F= '/^\[SystemFunction\]/{found=1} found && /^KeyToCallType=/{print $2; exit}' /mnt/mtd/config/customcfg.ini)
+if [ "$KEY_TO_CALL_TYPE" != "0" ]; then
+    /mnt/app/etc/SetCallType.sh 1
+fi
+
+# BoardAuthInit
+#echo "[XRS] Start Board Authorize..."
+/mnt/app/bin/BoardAuthInit
+
+# wifidetect
+#echo "[XRS] Run wifi_detect..."
+/mnt/app/bin/wifi_detect id
+/mnt/app/bin/wifi_detect noInsmodWifi
+
+# SD卡检查
+/mnt/app/bin/checkSDCard 1
+
+if [ -e "/dev/mmcblk0p1" ]; then
+    SD_STAT=$(cat /tmp/.sd_status)
+    #若卡状态正常才进行卡升级和产测文件判断
+    if [ "$SD_STAT" = "5" ];then
+        echo "[XRS] Start SD Operation!!!!!"
+        mount /dev/mmcblk0p1 $APP_RW_PATH/disk/mmcblk0p1
+
+        #若存在kgd_ver_check.sh，先执行脚本。根据脚本执行返回结果决定后续处理。
+        #如果返回fail,则在此处停住，不加载xrscam， 以及myWatchDogProcess程序。
+        #如果返回pass, 则按照原流程继续加载。
+        if [ -e "/dev/tmp/app/disk/mmcblk0p1/output/kgd_ver_check.sh" ];then
+            echo "[XRS] kgd_ver_check.sh exists!!!!!"
+            cp /dev/tmp/app/disk/mmcblk0p1/output/kgd_ver_check.sh /tmp/kgd_ver_check.sh
+            chmod +x /tmp/kgd_ver_check.sh
+            # 同步执行，若挂死则启动流程卡住
+            /tmp/kgd_ver_check.sh
+            if [ $? -ne 0 ]; then
+                echo "[XRS] kgd_ver_check.sh check failed!!!!!"
+                exit 1
+            else
+                echo "[XRS] kgd_ver_check.sh check passed!!!!!"
+            fi
+        fi
+		
+        cd /
+        umount $APP_RW_PATH/disk/mmcblk0p1
+        echo "[XRS] End SD Operation!!!!!"
+    else
+        #卡异常则打印异常错误码
+        echo "[ERROR] SD CARD ERROR[$SD_STAT]!!!"
+    fi
+fi
+
+# 不使用系统时区设置
+# rm -rf /mnt/mtd/etc/localtime
+
+# 启动BOA
+HTTP_HOME="/home/http"
+BOA_CFG="/mnt/mtd/etc/conf.d/boa/boa.conf"
+#echo "[XRS] Run boa, Http-Home: $HTTP_HOME, Boa-Cfg: $BOA_CFG"
+/mnt/app/bin/boa -c $HTTP_HOME -f $BOA_CFG
+
+#touch /mnt/mtd/en_debug_mode
+
+/mnt/app/scripts/record_system_time.sh ${SYS_TIME_CFG} &
+
+#mount /dev/mmcblk0p1 $APP_RW_PATH/disk/mmcblk0p1
+
+if [ -f $CORE_FLAG_FILE ]; then
+    echo "Xrs Enter Core Dump Mode ......"
+    ulimit -c unlimited
+    ulimit -s 4096
+    mkdir /tmp/app/disk/mmcblk0p1/picture
+    mount -t vfat /dev/mmcblk0p1 /tmp/app/disk/mmcblk0p1/picture
+    echo "/tmp/app/disk/mmcblk0p1/picture/coredump-%e-%p`date +%s`" > /proc/sys/kernel/core_pattern
+fi
+
+if [ -f $DBG_FLAG_FILE ]; then
+    echo "[XRS] Into Manual Mode!"
+    /mnt/app/bin/myWatchDogProcess  stop
+    telnetd -l /bin/sh
+else
+    #echo "[XRS] Into Auto Mode!"
+    #telnetd -l /bin/sh
+    /mnt/app/bin/MonitorProcess & > /dev/console
+	cd /mnt/app/bin/
+    ./xrscam &
+	/mnt/app/bin/myWatchDogProcess &
+	#/mnt/app/bin/myWatchDogProcess stop
+    cd -
+fi

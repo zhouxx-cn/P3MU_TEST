@@ -1,0 +1,182 @@
+#! /bin/sh
+
+DEV_NAME=$1
+DEV_HWID=$2
+
+WIFI_HIGH_GAIN_FLAG="/mnt/mtd/wifi_high_gain"
+
+cd /usr/ko
+
+if [ -e usb-common.ko ]; then
+	insmod usb-common.ko
+	insmod usbcore.ko
+	insmod dwc2.ko
+	insmod dwc3.ko
+fi
+
+if [ -e option.ko ]; then
+	insmod mii.ko
+	insmod usbserial.ko
+	insmod usb_wwan.ko
+	insmod usbnet.ko
+	insmod cdc_subset.ko
+	insmod cdc_ether.ko 
+	insmod asix.ko
+	insmod zaurus.ko
+	insmod net1080.ko
+	insmod rndis_host.ko
+	insmod cdc_ncm.ko
+	insmod usbmon.ko
+	insmod option.ko
+	insmod xhci-hcd.ko
+	insmod ehci-hcd.ko
+	insmod xhci-plat-hcd.ko
+	sleep 1
+fi
+
+insmod_wifi_ko(){
+	usbdevid=`lsusb | awk 'NR==2 {print $6}'`
+	echo "----usbdevid = $usbdevid"
+	if [ "$usbdevid"x == "0bda:f179"x ]; then
+		echo "[NET] Detected RTL8188FU3 Device"
+		insmod 8188fu.ko
+		echo "wifi_support 1 " > /proc/xrs/hwconf
+		echo "wifi_model RTL8188FU " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "007a:6052"x ]; then
+		echo "[NET] Detected ATBM6062BU Wifi-Ble Device"
+		insmod cfg80211.ko
+		insmod ATBM606x_wifi_usb.ko
+		echo "wifi_support 1 " > /proc/xrs/hwconf
+		echo "wifi_model ATBM6062BU " > /proc/xrs/hwconf
+		echo "bt_support 1 " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "007a:8890"x ]; then
+		echo "[NET] Detected ATBM6132BU Wifi-Ble Device"
+		insmod atbm6x3x_wifi_usb.ko
+		echo "wifi_support 1 " > /proc/xrs/hwconf
+		echo "wifi_model ATBM6132BU " > /proc/xrs/hwconf
+		echo "bt_support 1 " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "8065:6011"x ]; then
+		echo "[NET] Detected SSV6X5X Wifi-Ble Device"
+		insmod ssv6x5x.ko stacfgpath=ssv6x5x-wifi.cfg
+		echo "wifi_support 1 " > /proc/xrs/hwconf
+		echo "wifi_model SSV6X5X " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "a69c:88dc"x ]; then
+		echo "[NET] Detected AIC8800DL Wifi-Ble Device"
+		if [ -f $WIFI_HIGH_GAIN_FLAG ]; then
+			echo "[NET] Use High Gain Config."
+			cp firmware/xrs_high_gain_aic_userconfig_8800dc.txt /tmp/aic_userconfig_8800dc.txt
+			cp firmware/xrs_high_gain_aic_userconfig_8800dw.txt /tmp/aic_userconfig_8800dw.txt
+		else
+			echo "[NET] Use Normal Gain Config."
+			cp firmware/xrs_normal_gain_aic_userconfig_8800dc.txt /tmp/aic_userconfig_8800dc.txt
+			cp firmware/xrs_normal_gain_aic_userconfig_8800dw.txt /tmp/aic_userconfig_8800dw.txt
+		fi
+		insmod aic8800d/aic_load_fw.ko
+		insmod aic8800d/aic8800_fdrv.ko
+		insmod aic8800d/aic_btusb.ko
+		echo "wifi_support 1 " > /proc/xrs/hwconf
+		echo "wifi_model AIC8800DL " > /proc/xrs/hwconf
+		echo "bt_support 1 " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "a69c:8d80"x ]; then
+		echo "[NET] Detected AIC8800D80 Wifi-Ble Device"
+		if [ -f $WIFI_HIGH_GAIN_FLAG ]; then
+			echo "[NET] Use High Gain Config."
+			cp firmware/xrs_high_gain_aic_userconfig_8800d80.txt /tmp/aic_userconfig_8800d80.txt
+		else
+			echo "[NET] Use Normal Gain Config."
+			cp firmware/xrs_normal_gain_aic_userconfig_8800d80.txt /tmp/aic_userconfig_8800d80.txt
+		fi
+		insmod aic8800d/aic_load_fw.ko
+		insmod aic8800d/aic8800_fdrv.ko
+		insmod aic8800d/aic_btusb.ko
+		echo "wifi_support 1 " > /proc/xrs/hwconf
+		echo "wifi_model AIC8800D80 " > /proc/xrs/hwconf
+		echo "bt_support 1 " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "19d1:0001"x ]; then
+		echo "[NET] Detected 4G Device"
+		echo "support_4g 1 " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "2ecc:3010"x  ]; then
+		echo "[NET] Detected ZX800-SG 4G Device"
+		echo "support_4g 1 " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "3361:7b6e"x  ]; then
+		echo "[NET] Detected ZX800-HG 4G Device"
+		echo "support_4g 1 " > /proc/xrs/hwconf
+	elif [ "$usbdevid"x == "ffff:3733"x ]; then
+		echo "[NET] Detected H3873UV100 Device"
+		if [ -f $WIFI_HIGH_GAIN_FLAG ]; then
+			echo "[NET] Use High Gain Config."
+			cp /usr/etc/ws73/xrs_high_gain_ws73_cfg.ini /tmp/ws73_cfg.ini
+		else
+			echo "[NET] Use Normal Gain Config."
+			cp /usr/etc/ws73/xrs_normal_gain_ws73_cfg.ini /tmp/ws73_cfg.ini
+		fi
+		insmod plat_soc.ko
+		insmod wifi_soc.ko
+		insmod ble_soc.ko
+		echo "wifi_support 1 " > /proc/xrs/hwconf
+		echo "wifi_model H3873UV100 " > /proc/xrs/hwconf
+		echo "bt_support 1 " > /proc/xrs/hwconf
+	else
+		return 0
+	fi
+
+	return 1
+}
+
+usb_detect=`cat /proc/xrs/hwconf | grep usb_detect | awk '{print $2}'`
+if [ $usb_detect -eq 0 ]; then
+	echo "[BOARD] Board Tpye Skip Wifi/4G Detect."
+	retry=0
+else
+	retry=10
+fi
+
+retval=0
+echo "retval = $retval"
+while [ $retval -eq 0 ] && [ $retry -gt 0 ]
+do
+	echo "[NET] Wait USB Connect, retry $retry times"
+	insmod_wifi_ko
+	retval=$?
+
+	retry=`expr $retry - 1`
+	sleep 0.5
+done
+
+if [ $retry -eq 0 ]; then
+	echo "[NET] Not Found Support Wifi!"
+	echo "-----------------------------"
+	lsusb
+	echo "-----------------------------"
+fi
+
+for initscript in /usr/etc/init.d/S[0-9][0-9]*; do
+	if [ -x $initscript ]; then
+		echo "[RCS]: $initscript"
+		$initscript
+	fi
+done
+
+# Start Network
+#/etc/init.d/network start
+
+if [ -f "/mnt/mtd/en_telnetd" ]; then
+	#telnetd
+	telnetd -l /bin/sh
+fi
+
+if [ -f "/mnt/mtd/en_dropbear" ]; then
+	mkdir -p /var/log; touch /var/log/lastlog
+	dropbear -r /etc/dropbear/dropbear_rsa_host_key
+fi
+
+if [ -f "/mnt/mtd/en_nfs" ]; then
+	if [ -e sunrpc.ko -a -e lockd.ko -a -e nfs.ko -a -e nfsv3.ko ]; then
+		insmod sunrpc.ko
+		insmod grace.ko
+		# insmod nfs_ssc.ko
+		insmod lockd.ko
+		insmod nfs.ko
+		insmod nfsv3.ko
+	fi
+fi

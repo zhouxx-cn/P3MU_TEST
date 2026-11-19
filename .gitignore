@@ -1,0 +1,32 @@
+
+# 编译产物
+*.o
+RELEASE-arm-static/
+edvr.map
+**/test_dir/lib/
+**/partition/tmp/
+**/partition/output/
+**/partition/SINGLE.tbl
+**/partition/sccb_cfg.tmp
+**/partition/factory.bin
+**/partition/upgrade.bin
+**/partition/resume.bin
+**/partition/restore.bin
+
+# 日志
+*.log
+
+# VSCode
+.vscode/
+.trae/
+.clangd
+.cache/
+*.code-workspace
+.csearchindex
+compile_commands*.json
+.clang-format
+
+# Source Insight
+*.si4
+*.iw
+*.pr

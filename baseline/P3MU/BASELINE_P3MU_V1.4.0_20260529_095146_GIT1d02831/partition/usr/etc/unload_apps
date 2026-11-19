@@ -1,0 +1,16 @@
+#! /bin/sh
+
+echo "------------unload apps begin-------------"
+
+DEV_NAME=$1
+DEV_HWID=$2
+
+unload_app_apps=/mnt/app/etc/unload_app_apps
+
+if [ -x $unload_app_apps ]; then
+    echo "[RCS]: $unload_app_apps"
+	$unload_app_apps $DEV_NAME $DEV_HWID
+fi
+
+echo "------------unload apps end---------------"
+

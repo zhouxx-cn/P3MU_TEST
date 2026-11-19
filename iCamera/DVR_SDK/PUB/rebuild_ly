@@ -1,0 +1,57 @@
+#!/bin/sh
+dir=`pwd | awk -F\/ '{print $NF}'`
+TARGET=lib$dir.so
+echo $TARGET
+
+############## process version info #############################
+
+DIR=./
+VERSIONFILE=version.c
+svn info $DIR
+
+SVN=`svn info $DIR | sed -n '9,9p' | cut -d: -f2`
+TIME=`svn info $DIR | sed -n '10,10p' | cut -d+ -f1 | cut -d: -f2-4`
+
+tLen=`echo $SVN | wc -c`
+if [ $tLen -eq 1 ];then
+		echo "get version info from svn fail, maybe version or date is wrong, please build with make command"
+		exit 1;
+fi
+
+softversion=0_0_0
+versionfile=./version.txt
+
+if [ -f $versionfile ];then
+	read softversion < $versionfile
+else
+	echo "no find ($versionfile) file, build closed...................."
+	echo "file format:"
+	echo ""
+	echo "1_0_0"
+	echo "up line number is major, minor & change version, must on first line"
+	echo "add change log"
+	exit 1;
+fi
+
+echo "build version info......."
+echo "/***********************">$VERSIONFILE
+svn info ./>>$VERSIONFILE
+echo "***********************/">>$VERSIONFILE
+
+VERSION="const char *idvr_9000_version_$dir = \"Build9000-${softversion}-$TIME-svn${SVN}\";"
+echo $VERSION>>$VERSIONFILE
+echo $VERSION
+################### process version info end ###########################
+
+
+rm -rf ./*/$TARGET
+rm -rf ./*/version.o
+
+find -name "*.c" -or -name "*.cpp" -or -name "*.h" | xargs dos2unix -k -q
+find -name "*.c" -or -name "*.cpp" -or -name "*.h" | xargs indent
+find -name "*~" | xargs rm
+
+make clean -s
+make $1 -s
+
+echo "build ok"

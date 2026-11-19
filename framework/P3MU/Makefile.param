@@ -1,0 +1,49 @@
+#
+# All Sub-Makefile need include this file
+#
+
+export XQUIET := y
+export DEBUG ?= n
+
+ifeq ($(XQUIET), y)
+export quiet = quiet_
+export Q = @
+else
+export quiet = 
+export Q = 
+endif
+
+# Project Directory
+export ROOT_DIR 	:= $(dir $(word $(words $(MAKEFILE_LIST)), $(MAKEFILE_LIST)))
+export SCRIPTS_DIR 	:= $(ROOT_DIR)/scripts
+export PATH_DEF		:= $(SCRIPTS_DIR)/PathDef.mk
+
+# Path Define
+include $(PATH_DEF)
+# Version
+include $(VERSION_MK)
+
+ifeq ($(wildcard $(PRODUCT_MODE_MK)),)
+PRODUCT_MODE	:= release
+else
+include $(PRODUCT_MODE_MK)
+endif
+
+# BoardCfg
+include $(BOARD_CFG_MK)
+
+# Platform Config
+include $(PLATFORM_CFG_MK)
+
+# Commond Defne
+include $(CMD_DEF_MK)
+
+ifneq ($(ECHO_ONCE_BOARD_INFO), y)
+$(info BOARD: $(BOARD_TYPE) PLATFORM: $(PLATFORM) SENSORS: $(SENSORS) SDK: $(SDK))
+export ECHO_ONCE_BOARD_INFO ?= y
+endif
+
+# Check Env
+ifeq ($(wildcard $(shell which $(CC))),)
+$(error Commond $(CC) Not Exist!)
+endif

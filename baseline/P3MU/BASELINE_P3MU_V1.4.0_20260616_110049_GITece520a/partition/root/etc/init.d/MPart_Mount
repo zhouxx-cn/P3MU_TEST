@@ -1,0 +1,318 @@
+#!/bin/sh
+
+DATA_DIR=$1
+DATB_DIR=$2
+FORCE_CHECK=$3
+
+ERR_ECHO=
+
+UPGRADE_TAG_FILE=${DATA_DIR}/upgrade_tag
+UPGRADE_TAG_ENV="upgrade_tag"
+UPGRADE_TAG=""
+UPGRADE_TAG_START="start"
+UPGRADE_TAG_SUCCESS="success"
+UPGRADE_TAG_ERROR="error"
+UPGRADE_TAG_NORMAL="normal"
+
+BACKUP_DUAL=dual
+BACKUP_SINGLE=single
+SUPPORT_DUAL_BACKUP=
+
+MPART_IMG=
+MPART_MD5=
+MPART_NAME=
+MPART_BACKUP=
+MPART_IDX=0
+
+DATB_MOUNTED=0
+
+MPART_IN_ROOTFS_DIR=/mpart
+MPART_IN_ROOTFS_LIST=`ls ${MPART_IN_ROOTFS_DIR}`
+
+#
+# Check if the base-dual-mpart is exist, if not, add to check list.
+#
+BASE_MPART_LIST="app usr"
+MPart_BaseCheck()
+{
+    find=0
+    for BASE_NAME in ${BASE_MPART_LIST}; do
+        find=0
+        i=0
+        while [ $i -lt ${MPART_IDX} ]; do
+            eval NAME=\${MPART_NAME_$i}
+            if [ "${BASE_NAME}"x == "${NAME}"x ]; then
+                find=1
+                break
+            fi
+            i=`expr $i + 1`
+        done
+
+        # Not Found
+        if [ ${find} -eq 0 ]; then
+            in_rootfs=0
+            if [ -e ${MPART_IN_ROOTFS_DIR}/${BASE_NAME} ]; then
+                in_rootfs=1
+            fi
+
+            if [ ${in_rootfs} -eq 0 ]; then
+                eval MPART_NAME_${MPART_IDX}=${BASE_NAME}
+                eval MPART_IMG_${MPART_IDX}=${BASE_NAME}.${BACKUP_DUAL}.squashfs
+                eval MPART_MD5_${MPART_IDX}=check_${BASE_NAME}.md5
+                eval MPART_BACKUP_${MPART_IDX}=${BACKUP_DUAL}
+                MPART_IDX=`expr ${MPART_IDX} + 1`
+            fi
+        fi
+    done
+}
+
+MPart_Prepare()
+{
+    cd ${DATA_DIR}
+    MPART_IMG=`ls *.squashfs`
+    MPART_IDX=0
+    for IMG in ${MPART_IMG}; do
+        NAME=${IMG%%.*}
+        _BACKUP=${IMG%.*}
+        BACKUP=${_BACKUP#*.}
+        MD5="check_${NAME}.md5"
+
+        eval MPART_NAME_${MPART_IDX}=${NAME}
+        eval MPART_IMG_${MPART_IDX}=${IMG}
+        eval MPART_MD5_${MPART_IDX}=${MD5}
+        eval MPART_BACKUP_${MPART_IDX}=${BACKUP}
+
+        echo "${NAME} ${IMG} ${MD5} ${BACKUP}"
+
+        MPART_IDX=`expr ${MPART_IDX} + 1`
+    done
+
+    MPart_BaseCheck
+}
+
+MPart_Mount_DatB()
+{
+    if [ $DATB_MOUNTED -eq 1 ]; then
+        return 0;
+    fi
+
+	echo "Abnormal mount $DATB_DIR!"
+	mount -t yaffs2 -o "inband-tags" /dev/mtdblock`mtdnum datb` /$DATB_DIR
+
+    if [ $? -eq 0 ]; then
+        DATB_MOUNTED=1
+    fi
+}
+
+MPart_Mount()
+{
+    IMG_FILE=$1
+    MNT_DIR=$2
+
+    echo "Normal mount ${IMG_FILE} to ${MNT_DIR}."
+	mount -t squashfs ${IMG_FILE} ${MNT_DIR}
+    ERR_ECHO=$(echo $?)
+}
+
+MPart_CheckMd5()
+{
+    DIR=$1
+    FILE=$2
+    PWD=`pwd`
+
+    cd $DIR
+    md5sum -c $FILE | grep "OK"
+	ERR_ECHO=$(echo $?)
+    cd $PWD
+}
+
+MPart_CheckDiff()
+{
+	FILE_DST=$1
+    FILE_BAK=$2
+
+    diff $FILE_DST $FILE_BAK
+    ERR_ECHO=$(echo $?)
+}
+
+MPart_Recovery()
+{
+    DIR_DST=$1
+    DIR_BAK=$2
+    IMG_FILE=$3
+    MD5_FILE=$4
+
+    if [ "${DIR_BAK}"x == "${DATB_DIR}"x ]; then
+        MPart_Mount_DatB
+        if [ ${DATB_MOUNTED} -eq 0 ]; then
+            echo "Mount Datb failed!"
+            ERR_ECHO=1
+        fi
+    fi
+
+    MPart_CheckMd5 ${DIR_BAK} ${MD5_FILE}
+    if [ ${ERR_ECHO} -eq 0 ]; then
+        echo "Check ${IMG_FILE} in DIR(${DIR_BAK}) MD5 OK!"
+        echo "Recovery ${IMG_FILE}, ${DIR_BAK} -> ${DIR_DST}!"
+        cp -rf ${DIR_BAK}/${IMG_FILE} ${DIR_DST}/${IMG_FILE} 
+        echo "Recovery ${MD5_FILE}, ${DIR_BAK} -> ${DIR_DST}!"
+        cp -rf ${DIR_BAK}/${MD5_FILE} ${DIR_DST}/${MD5_FILE} 
+        ERR_ECHO=0
+    else
+        echo "Check ${IMG_FILE} in DIR(${DIR_BAK}) MD5 ERROR!"
+        ERR_ECHO=1
+    fi
+}
+
+MPart_DualCheck()
+{
+    DIR_SRC=$1
+    DIR_DST=$2
+
+    if [ "${SUPPORT_DUAL_BACKUP}"x != "true"x ]; then
+        return 0
+    fi
+
+    MPart_Mount_DatB
+    if [ ${DATB_MOUNTED} -eq 0 ]; then
+        echo "Mount Datb failed!"
+        ERR_ECHO=1
+        return 1
+    fi
+
+    i=0
+    while [ $i -lt ${MPART_IDX} ]; do
+        eval NAME=\${MPART_NAME_$i}
+        eval MD5=\${MPART_MD5_$i}
+        eval IMG=\${MPART_IMG_$i}
+        eval BACKUP=\${MPART_BACKUP_$i}
+
+        # DATB Only Have Dual Image
+        if [ "${BACKUP}"x == "${BACKUP_DUAL}"x ]; then
+            MPart_CheckMd5 ${DIR_SRC} ${MD5}
+            if [ ${ERR_ECHO} -eq 0 ]; then
+                echo "Check MPart(${NAME}) in DIR(${DIR_SRC}) MD5 OK!"
+                MPart_CheckDiff ${DIR_SRC}/${MD5} ${DIR_DST}/${MD5}
+                if [ ${ERR_ECHO} -eq 0 ]; then
+                    echo "Check MPart(${NAME}) in DIR(${DIR_DST}) Diff OK!"
+                else
+                    echo "Check MPart(${NAME}) in DIR(${DIR_DST}) Diff ERROR!"
+                    MPart_Recovery ${DIR_DST} ${DIR_SRC} ${IMG} ${MD5}
+                fi
+            else
+                echo "Check MPart(${NAME}) in DIR(${DIR_SRC}) MD5 ERROR!"
+                MPart_Recovery ${DIR_SRC} ${DIR_DST} ${IMG} ${MD5}
+            fi
+        fi
+
+        i=`expr ${i} + 1`
+    done
+}
+
+MPart_NormalCheck()
+{
+    i=0
+    while [ $i -lt ${MPART_IDX} ]; do
+        eval NAME=\${MPART_NAME_$i}
+        eval MD5=\${MPART_MD5_$i}
+        eval IMG=\${MPART_IMG_$i}
+        eval BACKUP=\${MPART_BACKUP_$i}
+
+        MPart_CheckMd5 ${DATA_DIR} ${MD5}
+        if [ ${ERR_ECHO} -eq 0 ]; then
+            echo "Check MPart(${NAME}) in DIR(${DATA_DIR}) MD5 OK!"
+        else
+            echo "Check MPart(${NAME}) in DIR(${DATA_DIR}) MD5 ERROR!"
+            if [ ! -e ${MD5} ]; then
+                echo "MPart(${NAME}) in DIR(${DATA_DIR}) Check-File(${MD5}) Not-Found!"
+            fi
+
+            # if dual, recover from datb
+            if [ "${SUPPORT_DUAL_BACKUP}"x == "true"x ]; then
+                if [ "${BACKUP}"x == "${BACKUP_DUAL}"x ]; then
+                    MPart_Recovery ${DATA_DIR} ${DATB_DIR} ${IMG} ${MD5}
+                fi
+            fi
+        fi
+
+        MNT_DIR=
+        if [ "${NAME}"x == "usr"x ]; then
+            MNT_DIR=/usr
+        else
+            MNT_DIR=/mnt/${NAME}
+            mkdir ${MNT_DIR}
+        fi
+        MPart_Mount ${DATA_DIR}/${IMG} ${MNT_DIR}
+        ERR_ECHO=0
+        if [ ${ERR_ECHO} -eq 0 ]; then
+            echo "Mount MPart(${NAME}) from ${IMG} on ${MNT_DIR} OK!"
+        else
+            echo "Mount MPart(${NAME}) from ${IMG} on ${MNT_DIR} ERROR!"
+        fi
+        
+        i=`expr ${i} + 1`
+    done
+}
+
+MPART_InRootfsCheck()
+{
+    if [ "${MPART_IN_ROOTFS_LIST}"x == ""x ]; then
+        return 0
+    fi
+
+    for NAME in ${MPART_IN_ROOTFS_LIST}; do
+        MNT_DIR=
+        if [ "${NAME}"x == "usr"x ]; then
+            MNT_DIR=/usr
+        else
+            MNT_DIR=/mnt/${NAME}
+            mkdir ${MNT_DIR}
+        fi
+
+        echo "Mount ${MPART_IN_ROOTFS_DIR}/${NAME} -->  ${MNT_DIR}"
+        mount ${MPART_IN_ROOTFS_DIR}/${NAME} ${MNT_DIR}
+    done
+}
+
+# Main
+echo "------------ MPart Mount Start ------------"
+
+UPGRADE_TAG=`fw_printenv ${UPGRADE_TAG_ENV} | cut -b 13-`
+if [ "${UPGRADE_TAG}"x = ""x ]; then
+    if [ -e ${UPGRADE_TAG_FILE} ]; then
+        UPGRADE_TAG=`cat ${UPGRADE_TAG_FILE}`
+    else
+        UPGRADE_TAG=${UPGRADE_TAG_START}
+    fi
+fi
+
+if [ ! "`mtdnum datb`"x = "NULL"x ]; then
+    SUPPORT_DUAL_BACKUP="true"
+else
+    SUPPORT_DUAL_BACKUP="false"
+fi
+
+MPart_Prepare
+
+if [ "${UPGRADE_TAG}"x != "${UPGRADE_TAG_NORMAL}"x  ] || [ "TRUE"x == "${FORCE_CHECK}"x ]; then
+	echo "Force Check or Upgrade Start, Tag(${UPGRADE_TAG}) ForceCheck(${FORCE_CHECK})..."
+
+    if [ "${SUPPORT_DUAL_BACKUP}"x == "true"x ]; then
+        if [ "${UPGRADE_TAG_SUCCESS}"x == "${UPGRADE_TAG}"x ] || [ "TRUE"x == "${FORCE_CHECK}"x ]; then
+            echo "Upgrade Success! Dual Check DATB -->> DATA!"
+            MPart_DualCheck ${DATB_DIR} ${DATA_DIR}
+        else
+            echo "Upgrade Failed! Dual Check DATA -->> DATB!"
+            MPart_DualCheck ${DATA_DIR} ${DATB_DIR}
+        fi
+    else
+        echo "Not Support Dual-Backup!"
+    fi
+	
+    rm -rf $UPGRADE_TAG_FILE
+    fw_setenv ${UPGRADE_TAG_ENV} ${UPGRADE_TAG_NORMAL}
+fi
+
+MPart_NormalCheck
+MPART_InRootfsCheck
+echo "------------ MPart Mount End ------------"

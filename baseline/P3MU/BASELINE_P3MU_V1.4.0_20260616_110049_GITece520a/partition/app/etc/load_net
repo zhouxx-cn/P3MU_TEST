@@ -1,0 +1,40 @@
+#/bin/sh
+
+ifconfig lo 127.0.0.1
+
+EDVR_CFG_FILE="/mnt/mtd/config/Edvr.cfg"
+READINI_TOOL="/mnt/app/bin/readini"
+CFG_IP_SECTION="INet_Cfg"
+CFG_IP_KEY="LocalIP"
+CFG_NETMASK_KEY="LocalSubnetMask"
+
+# ªÒ»°≈‰÷√IP
+if [ -f $EDVR_CFG_FILE ]; then
+    IP=`$READINI_TOOL $EDVR_CFG_FILE $CFG_IP_SECTION $CFG_IP_KEY`
+    NETMASK=`$READINI_TOOL $EDVR_CFG_FILE $CFG_IP_SECTION $CFG_NETMASK_KEY`
+
+    if [ "$IP" ] ; then
+        if [ ! "$NETMASK" ]; then
+            NETMASK="255.255.255.0"
+        fi
+        
+        echo "[XRS][NET] Set IP=$IP NETMASK=$NETMASK"
+        ifconfig eth0 $IP netmask $NETMASK;
+    else
+        echo "[XRS] Use default ipaddr and netmask!"
+        ifconfig eth0 192.168.1.11 netmask 255.255.0.0;
+    fi
+else
+    echo "[XRS] Use default ipaddr and netmask!"
+    ifconfig eth0 192.168.1.11 netmask 255.255.0.0;
+fi
+
+if [ -f "/mnt/mtd/en_telnetd" ]; then
+	# telnetd
+	telnetd -l /bin/sh
+fi
+
+if [ -f "/mnt/mtd/en_dropbear" ]; then
+	mkdir -p /var/log; touch /var/log/lastlog
+	dropbear -r /etc/dropbear/dropbear_rsa_host_key
+fi

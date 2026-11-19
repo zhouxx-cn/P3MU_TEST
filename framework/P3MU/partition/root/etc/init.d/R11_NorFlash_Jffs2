@@ -1,0 +1,28 @@
+#! /bin/sh
+
+mount -t jffs2 /dev/mtdblock`mtdnum data` /data -o sync
+if [ $? != 0 ]; then
+    flash_eraseall /dev/mtd`mtdnum data`
+    mount -t jffs2 /dev/mtdblock`mtdnum data` /data -o sync
+fi
+
+if [ ! -e /data/logo ]; then
+    echo "Not-Found /data/logo, recover."
+    mkdir /data/logo
+fi
+
+if [ ! -e /data/speech ]; then
+    echo "Not-Found /data/speech, recover."
+    mkdir /data/speech
+fi
+
+if [ ! -e /data/config ]; then
+    echo "Not-Found /data/config, recover."
+    mkdir /data/config
+fi
+
+mount /data/logo /mnt/logo
+mount /data/speech /mnt/speech
+mount /data/config /mnt/mtd
+
+/etc/init.d/MPart_Mount /data /datb

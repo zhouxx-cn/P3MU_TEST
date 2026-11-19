@@ -1,0 +1,44 @@
+#! /bin/sh
+
+if [ $DEV_QUICK_START -eq 0 ]; then
+	echo "------------ load usr apps -----------------"
+fi
+DEV_NAME=$1
+DEV_HWID=$2
+
+DIS_APP_APPS_FILE="/mnt/mtd/dis_app_apps"
+DIS_OEM_APPS_FILE="/mnt/mtd/dis_oem_apps"
+
+ulimit -s 2048
+sysctl -p -q
+
+#syslogd -S -s 3000 -b 12 -O /mnt/mtd/log/sys.log
+
+if [ -f $DIS_APP_APPS_FILE ]; then
+	if [ -x $DIS_APP_APPS_FILE ]; then
+		/mnt/mtd/dis_app_apps $DEV_NAME $DEV_HWID
+	else
+		echo "disable app apps"
+	fi
+else
+	if [ -f "/mnt/app/etc/load_app_apps" ]; then
+		if [ $DEV_QUICK_START -eq 0 ]; then
+			echo "start load app apps"
+		fi
+		/mnt/app/etc/load_app_apps $DEV_NAME $DEV_HWID
+	fi
+fi
+
+if [ -f $DIS_OEM_APPS_FILE ]; then
+	if [ -x $DIS_OEM_APPS_FILE ]; then
+		/mnt/mtd/dis_oem_apps $DEV_NAME $DEV_HWID
+	else
+		echo "disable oem apps"
+	fi
+else
+	if [ -f "/mnt/oem/etc/load_oem_apps" ]; then
+		echo "start load oem apps"
+		/mnt/oem/etc/load_oem_apps $DEV_NAME $DEV_HWID
+	fi
+fi
+

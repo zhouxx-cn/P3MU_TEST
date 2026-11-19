@@ -1,0 +1,67 @@
+#!/bin/sh
+# udhcpc script edited by Tim Riker <Tim@Rikers.org>
+
+if [ -z "$1" ]; then
+    echo "Error: should be called from udhcpc";
+    exit 1
+fi
+
+if [ "$interface" = "wlan0" ];then
+    gwfile="/tmp/.wlan.gw.gw.gw";
+    RESOLV_CONF="/etc/resolv_wlan.conf"
+elif [ "$interface" = "eth1" -o "$interface" = "usb0" ]; then
+    gwfile="/tmp/.gprs.gw.gw.gw";
+    RESOLV_CONF="/etc/resolv_gprs.conf"
+else
+    gwfile="/tmp/.tmp.gw.gw.gw"
+    RESOLV_CONF="/etc/resolv.conf"
+fi
+
+if [ -n "$broadcast" ]; then
+    BROADCAST="broadcast $broadcast"
+fi
+
+if [ -n "$subnet" ]; then
+    NETMASK="netmask $subnet"
+fi
+
+case "$1" in
+    deconfig)
+        #/sbin/ifconfig $interface 0.0.0.0
+        ;;
+
+    renew|bound)
+        /sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+        if [ -n "$router" ] ; then
+            echo "deleting routers"
+            while route del default gw 0.0.0.0 dev $interface ; do
+                :
+            done
+
+            for i in $router ; do
+                case "$i" in
+                    0.0.0.0)
+                        ;;
+                    *)
+                        echo  gw is $i
+                        echo $i > $gwfile
+                        echo  dev is $interface
+                        route add default gw $i dev $interface
+                        ;;
+                esac
+            done
+        fi
+
+        echo -n > $RESOLV_CONF
+        if [ -n "$domain" ]; then
+            echo search $domain >> $RESOLV_CONF
+        fi
+        for i in $dns ; do
+            echo adding dns $i
+            echo nameserver $i >> $RESOLV_CONF
+        done
+        ;;
+
+esac
+
+exit 0

@@ -1,0 +1,332 @@
+# !/bin/bash
+
+CONFIG=${1}
+CONFIG_FILE=ifcfg-${CONFIG}
+WCLI=/usr/sbin/wpa_cli
+
+# load interface config file
+if [ ! -f /etc/network/${CONFIG_FILE} ] ; then
+  echo "not search ${CONFIG_FILE} file"
+  exit 1;
+fi
+. /etc/network/${CONFIG_FILE}
+
+# check root user priority
+if [ "$USER" != "root" ] ; then
+  echo "only the root can start the device ${CONFIG}"
+  exit 1;
+fi
+
+# start wpa_supplicant first
+killall -9 wpa_supplicant
+ifconfig ${CONFIG} up
+cp -f /mnt/mtd/etc/wifi/wpa.conf /tmp/
+if [ "${CONFIG}" == "ra0" ] ; then
+    echo "ra0"
+	/usr/sbin/wpa_supplicant -B -i${CONFIG} -c/tmp/wpa.conf -Dwext
+else
+	/usr/sbin/wpa_supplicant -B -i${CONFIG} -c/tmp/wpa.conf -Dnl80211
+fi
+
+echo "wireless configurate"
+
+is_number()
+{
+	tst=`expr $1 : "[0-9]*$"`
+	if [ $tst -eq 0 ]; then
+		#echo "string"
+		return 0;
+	else
+		#echo "number"
+		return 1;
+	fi
+}
+
+# Infra OPEN Mode
+infra_open_mode()
+{
+	echo "infra_open_mode"
+	echo "# !/bin/bash" >> /tmp/wireless_conf
+	echo "$WCLI remove_network 0" >> /tmp/wireless_conf
+	echo "$WCLI ap_scan 1" >> /tmp/wireless_conf
+	echo "$WCLI add_network" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 ssid '\"$ESSID\"'" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 key_mgmt NONE" >> /tmp/wireless_conf
+	echo "$WCLI select_network 0" >> /tmp/wireless_conf
+}
+
+# Infra WEP open system
+infra_wep_open ()
+{
+	echo "infra_wep_open"
+	echo "# !/bin/bash" >> /tmp/wireless_conf
+	echo "$WCLI remove_network 0" >> /tmp/wireless_conf
+	echo "$WCLI ap_scan 1" >> /tmp/wireless_conf
+	echo "$WCLI add_network" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 ssid '\"$ESSID\"'" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 key_mgmt NONE" >> /tmp/wireless_conf
+	echo "if [ $DEFAULTKEY == 1 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY1
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY1Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key0 $KEY1" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key0 '\"$KEY1\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 0" >> /tmp/wireless_conf
+	echo "elif [ $DEFAULTKEY == 2 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY2
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY2Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key1 $KEY2" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key1 '\"$KEY2\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 1" >> /tmp/wireless_conf
+	echo "elif [ $DEFAULTKEY == 3 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY3
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY3Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key2 $KEY3" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key2 '\"$KEY3\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 2" >> /tmp/wireless_conf
+	echo "else [ $DEFAULTKEY == 4 ]" >> /tmp/wireless_conf
+#	is_number $KEY4
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY4Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key3 $KEY4" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key3 '\"$KEY4\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 3" >> /tmp/wireless_conf
+	echo "fi" >> /tmp/wireless_conf
+	echo "$WCLI select_network 0" >> /tmp/wireless_conf
+}
+
+# Infra WEP share system
+infra_wep_share() 
+{
+	echo "infra_wep_share"
+	echo "# !/bin/bash" >> /tmp/wireless_conf
+	echo "$WCLI remove_network 0" >> /tmp/wireless_conf
+	echo "$WCLI ap_scan 1" >> /tmp/wireless_conf
+	echo "$WCLI add_network" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 ssid '\"$ESSID\"'" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 key_mgmt NONE" >> /tmp/wireless_conf
+	echo "if [ $DEFAULTKEY == 1 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY1
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY1Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key0 $KEY1" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key0 '\"$KEY1\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 0" >> /tmp/wireless_conf
+	echo "elif [ $DEFAULTKEY == 2 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY2
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY2Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key1 $KEY2" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key1 '\"$KEY2\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 1" >> /tmp/wireless_conf
+	echo "elif [ $DEFAULTKEY == 3 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY3
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY3Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key2 $KEY3" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key2 '\"$KEY3\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 2" >> /tmp/wireless_conf
+	echo "else [ $DEFAULTKEY == 4 ]" >> /tmp/wireless_conf
+#	is_number $KEY4
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY4Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key3 $KEY4" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key3 '\"$KEY4\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 3" >> /tmp/wireless_conf
+	echo "fi" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 auth_alg SHARED" >> /tmp/wireless_conf
+	echo "$WCLI select_network 0" >> /tmp/wireless_conf
+}
+
+# Infra WPA
+infra_wpa_mode()
+{
+	echo "infra_wpa_mode"
+	echo "# !/bin/bash" >> /tmp/wireless_conf
+	echo "$WCLI remove_network 0" >> /tmp/wireless_conf
+	echo "$WCLI ap_scan 1" >> /tmp/wireless_conf
+	echo "$WCLI add_network" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 ssid '\"$ESSID\"'" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 psk '\"$WPAPSK\"'" >> /tmp/wireless_conf
+	echo "$WCLI select_network 0" >> /tmp/wireless_conf
+}
+
+# Adhoc OPEN
+adhoc_open_mode()
+{
+	echo "adhoc_open_mode"
+	$WCLI scan
+	$WCLI scan_results
+	echo "# !/bin/bash" >> /tmp/wireless_conf
+	echo "$WCLI remove_network 0" >> /tmp/wireless_conf
+	echo "$WCLI ap_scan 2" >> /tmp/wireless_conf
+	echo "$WCLI add_network" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 ssid '\"$ESSID\"'" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 mode 1" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 key_mgmt NONE" >> /tmp/wireless_conf
+	echo "$WCLI select_network 0" >> /tmp/wireless_conf
+}
+
+# Adhoc WEP
+adhoc_wep_mode ()
+{
+	echo "adhoc_wep_mode"
+	$WCLI scan
+	$WCLI scan_results
+	echo "# !/bin/bash" >> /tmp/wireless_conf
+	echo "$WCLI remove_network 0" >> /tmp/wireless_conf
+	echo "$WCLI ap_scan 2" >> /tmp/wireless_conf
+	echo "$WCLI add_network" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 ssid '\"$ESSID\"'" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 mode 1" >> /tmp/wireless_conf
+	echo "$WCLI set_network 0 key_mgmt NONE" >> /tmp/wireless_conf
+	echo "if [ $DEFAULTKEY == 1 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY1
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY1Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key0 $KEY1" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key0 '\"$KEY1\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 0" >> /tmp/wireless_conf
+	echo "elif [ $DEFAULTKEY == 2 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY2
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY2Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key1 $KEY2" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key1 '\"$KEY2\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 1" >> /tmp/wireless_conf
+	echo "elif [ $DEFAULTKEY == 3 ]; then" >> /tmp/wireless_conf
+#	is_number $KEY3
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY3Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key2 $KEY3" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key2 '\"$KEY3\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 2" >> /tmp/wireless_conf
+	echo "else [ $DEFAULTKEY == 4 ]" >> /tmp/wireless_conf
+#	is_number $KEY4
+#	if [ $? -eq 1 ] ; then
+	if [ "${KEY4Type}" == "HEX" ] ; then
+		echo "	$WCLI set_network 0 wep_key3 $KEY4" >> /tmp/wireless_conf
+	else
+		echo "	$WCLI set_network 0 wep_key3 '\"$KEY4\"'" >> /tmp/wireless_conf
+	fi
+	echo "	$WCLI set_network 0 wep_tx_keyidx 3" >> /tmp/wireless_conf
+	echo "fi" >> /tmp/wireless_conf
+	echo "$WCLI select_network 0" >> /tmp/wireless_conf
+}
+
+echo "......"
+echo ${AUTH}
+if [ "${AUTH}" == "OPEN" ] ; then
+	if [ "${NETWORKTYPE}" == "Infra" ]; then
+		infra_open_mode
+	else
+		adhoc_open_mode
+	fi
+elif [ "${AUTH}" == "SHARED" ]; then
+	if [ "${NETWORKTYPE}" == "Infra" ]; then
+		if [ "${ENC}" == "NONE" ]; then
+			infra_wep_open
+		else
+			infra_wep_share
+		fi
+	else
+		adhoc_wep_mode
+	fi
+elif [ "${AUTH}" == "WEPAUTO" ]; then
+	if [ "${NETWORKTYPE}" == "Infra" ]; then
+		infra_wep_share
+	else
+		adhoc_wep_mode
+	fi
+else
+	echo ${NETWORKTYPE}
+	if [ "${NETWORKTYPE}" == "Infra" ]; then
+		infra_wpa_mode
+	else
+		infra_open_mode
+	fi
+fi
+
+# start wifi
+chmod 777 /tmp/wireless_conf
+CONFIG_ERR=`/tmp/wireless_conf | grep 'FAIL'`
+rm -f /tmp/wireless_conf
+$WCLI -i ${CONFIG} save_config
+
+echo "run result: " $CONFIG_ERR
+if [ "${CONFIG_ERR}" == "FAIL" ] ; then
+  echo "invalid parameter" > /var/wifi_connect_stauts.log
+	exit 1
+fi
+
+function poke {
+  while true
+  do
+    printf '\n'
+    sleep 1
+  done
+}
+
+checktime=1
+function connect_watch {
+  (poke) | $WCLI | while read line
+  do
+    checktime=$((${checktime} + 1))
+    #echo $checktime
+    if [ $checktime == 45 ] ; then
+      echo "command timeout" > /var/wifi_connect_stauts.log
+      killall wpa_cli
+      return 1
+    fi
+    echo $line
+    case "$line" in
+      *'4-Way Handshake failed'*)
+        echo "incorrect key"
+        echo "incorrect password" > /var/wifi_connect_stauts.log
+        killall wpa_cli
+        return 1
+      ;;
+      *'CTRL-EVENT-CONNECTED'*)
+        echo "connected"
+        echo "connected" > /var/wifi_connect_stauts.log
+        killall wpa_cli
+        return 0
+      ;;
+    esac
+  done
+}
+
+connect_watch
+if [ $? -eq 1 ] ; then
+  $WCLI remove_network 0
+  exit 1
+fi
+
+# clear eth0 ip
+ifconfig eth0 0.0.0.0
+
+/etc/network/ifup ${CONFIG}

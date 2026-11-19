@@ -1,0 +1,122 @@
+#!/bin/sh
+
+DEV_NAME=$1
+DEV_TYPE=$2
+
+echo "------------load media---------------"
+
+# DDR start:    0x40000000
+# 192K, FDT&ATF mem
+# kernel start: 0x40030000
+# 64M, os mem
+# MMZ start:    0x44030000
+# 64M - 128K, mmz mem
+
+SNS_TYPE0=os04d10;               # sensor type
+SNS_TYPE1=os04d10;               # sensor type
+
+mmz_start=0x43000000;         # mmz start addr, default:0x42000000 (0x40000000+0x2000000(OS))
+mmz_size=16384K;               # mmz size, default:96M (128M-32M)
+SYS_PROFILE=0
+IR_AUTO=1
+BOARD=dmeb;                      # sck dmeb
+
+report_error()
+{
+    echo "******* Error: There's something wrong, please check! *****"
+    exit 1
+}
+
+start_logd()
+{
+	/usr/etc/axsyslogd start
+	/usr/etc/axklogd start
+}
+
+function insert_security_subsys()
+{
+    insmod ot_cipher.ko
+    # insmod ot_km.ko
+}
+
+function remove_security_subsys()
+{
+    rmmod ot_km.ko
+    rmmod ot_cipher.ko
+}
+
+function insert_gyro()
+{
+    insmod extdrv/ot_spi.ko spi=1
+    insmod ot_gyrodis.ko
+    insmod ot_motionfusion.ko
+    insmod extdrv/motionsensor_mng.ko
+    insmod extdrv/motionsensor_chip.ko
+}
+
+insert_ko()
+{
+	echo "insert ko bgn"
+	# sys config
+    #insmod sys_config.ko sensors=sns0=$SNS_TYPE0,sns1=$SNS_TYPE1
+
+    # driver load
+    # insmod ot_osal.ko proc_show=1
+    # insmod ot_mmz.ko anony=1 mmz_allocator=ot mmz=anonymous,0,$mmz_start,$mmz_size mem_process_isolation=0 || report_error
+    # insmod ot_base.ko logmpp_show=1
+    # insmod ot_vb.ko
+    # insmod ot_vca.ko
+    # insmod ot_sys.ko profile=$SYS_PROFILE
+    # insmod ot_rgn.ko
+    # insmod ot_vpp.ko
+    # insmod ot_vgs.ko
+    # insmod ot_vi.ko
+    # insmod ot_isp.ko
+    # insmod ot_vpss.ko
+    # insmod ot_chnl.ko
+    # insmod ot_rc.ko
+    # insmod ot_venc.ko g_venc_max_chn_num=4
+    # insmod ot_h264e.ko
+    # insmod ot_h265e.ko
+    # insmod ot_jpege.ko
+    # insmod ot_svp_npu.ko svp_npu_ops_sel=1 svp_npu_max_task_node_num=16
+    # insmod ot_ive.ko save_power=0 max_node_num=20
+    # insmod extdrv/ot_pwm.ko
+    # insmod extdrv/ot_piris.ko
+    # insmod extdrv/ot_sensor_i2c.ko
+    # insmod extdrv/ot_sensor_spi.ko
+
+    # insert_audio
+    # insmod ot_mipi_rx.ko
+    # insmod ot_user.ko
+    # insmod ot_uvc.ko
+    # insmod ot_pm.ko
+    insert_security_subsys
+
+    # inset lcd
+    # insmod ot_spi_st7789.ko
+    # insmod ot_spi_dma_transfer.ko
+
+    insmod ot_wdt.ko nodeamon=1
+    # insmod ot_adc.ko
+	echo "insert video end"
+}
+
+insert_audio()
+{
+    insmod ot_aio.ko
+    insmod ot_ai.ko
+    insmod ot_ao.ko
+    insmod ot_aenc.ko
+    insmod ot_adec.ko
+    insmod ot_acodec.ko
+}
+
+reset_log_level()
+{
+	echo "set log level bgn"
+	echo "set log level end"
+}
+
+# main
+insert_ko;

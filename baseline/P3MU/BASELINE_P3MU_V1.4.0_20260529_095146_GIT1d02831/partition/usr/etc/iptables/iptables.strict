@@ -1,0 +1,17 @@
+#!/bin/sh
+
+IPT=/usr/sbin/xtables-multi
+IPSET=/usr/sbin/ipset
+
+# Force SYN packet check
+$IPT iptables -A INPUT -p tcp ! --syn -m state --state NEW -j DROP
+# Force fragmented packet check
+$IPT iptables -A INPUT -f -j DROP
+# Drop XMAS packets
+$IPT iptables -A INPUT -p tcp --tcp-flags ALL ALL -j DROP
+# Drop NULL packets
+$IPT iptables -A INPUT -p tcp --tcp-flags ALL NONE -j DROP
+# ∑¿∂Àø⁄…®√Ë
+$IPT iptables -A FORWARD -p tcp --tcp-flags SYN,ACK,FIN,RST RST -m limit --limit 1/s -j ACCEPT
+# ∑¿÷πÀ¿Õˆ÷Æping
+$IPT iptables -A FORWARD -p icmp --icmp-type echo-request -m limit --limit 1/s -j ACCEPT

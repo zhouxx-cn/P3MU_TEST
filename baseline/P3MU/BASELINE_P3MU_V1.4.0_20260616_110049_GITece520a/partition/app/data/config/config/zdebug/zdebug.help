@@ -1,0 +1,29 @@
+Instructions for use: program [-option value]
+[option]
+1. log output mode:
+    -printf [bool]:	enable/disable printf interface
+    -syslog [bool]:	enable/disable syslog/dbgview interface
+    -file [bool]:	enable/disable log write in file
+2. log level control:
+    -leveldbg [bool]:	enable/disable debug level log output
+    -levelinfo [bool]:	enable/disable info level log output
+    -levelwarn [bool]:	enable/disable warning level log output
+    -levelerror [bool]:	enable/disable error level log output
+    -levelfatal [bool]:	enable/disable fatal level log output
+3. log output property:
+	-focus [string]:by highlighting the focus of the module log output is displayed the color of the parameter false to turn off
+    -time [bool]:	enable/disable increase date time prefix
+    -tid [bool]:	enable/disable increase thread id prefix
+    -logpath [string]:	edit log file path, switch files when the current date changes
+    -console:		redirect printf to console, linux platform only
+    -tty [string]:	redirect printf to terminal, linux platform only, if there is no value, redirect to the current terminal
+    -show [string]:	show module state debug information, use '-show zdebug attribute' output zdebug attribute
+[value]
+    [ bool ]:		enable: true 1, disable: false 0
+    [ integer ]:	number
+    [ string ]:		text
+[example]
+    program -file true
+    program -leveldbg
+    program [-tty] or [-tty /dev/pts/3]
+    program -show zdebug attribute

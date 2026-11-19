@@ -1,0 +1,52 @@
+#!/bin/sh
+
+dev_name=
+dev_hwid=
+snr_name=
+unload_app=/usr/etc/unload_apps
+
+find_devid()
+{
+	PROC_DEVINFO=/proc/xrs/devinfo
+	dev_hwid=`cat $PROC_DEVINFO | grep HWID: | awk '{print $2}'`
+	echo "dev_hwid: "$dev_hwid
+}
+
+find_devtype()
+{
+	
+	PROC_HWCONF=/proc/xrs/hwconf
+	dev_name=`cat $PROC_HWCONF | grep BOARD: | awk '{print $2}'`
+	snr_name=`cat $PROC_HWCONF | grep SENSOR: | awk '{print $2}'`
+	echo "dev_name: "$dev_name "snr_name: "$snr_name
+}
+
+echo "------------unload modules begin---------------"
+
+# step 1: get device type
+find_devid
+find_devtype
+
+# step 1: load apps
+if [ -x $unload_app ]; then
+	$unload_app $dev_name $dev_hwid
+fi
+
+# # step 2: unload net modules
+# for unload_net in /usr/etc/unload_net_hi*; do
+# 	if [ -x $unload_net ]; then
+# 		echo "[RCS]: $unload_net"
+# 		$unload_net $dev_name $dev_hwid
+# 	fi
+# done
+
+# # step 3: unload video modules
+# for unload_media in /usr/etc/unload_media_hi*; do
+# 	if [ -x $unload_media ]; then
+# 		echo "[RCS]: $unload_media"
+# 		$unload_media $dev_name $dev_hwid
+# 	fi
+# done
+
+echo "------------unload modules end---------------"
+

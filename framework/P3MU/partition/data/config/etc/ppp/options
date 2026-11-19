@@ -1,0 +1,21 @@
+ nodetach 
+ crtscts 
+ show-password 
+ usepeerdns 
+ noauth 
+ noipdefault 
+ novj 
+ novjccomp 
+ noaccomp 
+ nodeflate 
+ nopcomp 
+ default-asyncmap 
+ defaultroute 
+ ipcp-accept-local 
+ ipcp-accept-remote 
+ lcp-echo-interval 20 
+ lcp-echo-failure  3 
+ mtu  1492 
+ mru  1492 
+ persist
+ 

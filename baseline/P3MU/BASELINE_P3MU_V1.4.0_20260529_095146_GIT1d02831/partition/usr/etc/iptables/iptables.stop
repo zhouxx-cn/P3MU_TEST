@@ -1,0 +1,11 @@
+#!/bin/sh
+
+IPT=/usr/sbin/xtables-multi
+
+#清除规则
+$IPT iptables -F
+$IPT iptables -X
+$IPT iptables -Z
+
+#预定义策略
+$IPT iptables -P INPUT ACCEPT # 默认是运行访问

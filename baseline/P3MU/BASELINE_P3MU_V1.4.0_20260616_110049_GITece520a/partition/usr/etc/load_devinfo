@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# echo "------------load devinfo begin---------------"
+
+insmod devinfo.ko cfgfile=devinfo.cfg
+
+# echo "------------load devinfo end---------------"
+

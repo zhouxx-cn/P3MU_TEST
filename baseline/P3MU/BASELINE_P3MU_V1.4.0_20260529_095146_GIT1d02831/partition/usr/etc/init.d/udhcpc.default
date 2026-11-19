@@ -1,0 +1,121 @@
+#!/bin/sh
+
+RESOLV_CONF="/etc/resolv.conf"
+LOCAL_RESOLV_CONF="/etc/local_resolv.conf"
+
+update_interface()
+{
+  [ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
+  [ -n "$subnet" ] && NETMASK="netmask $subnet"
+#  harddress=`cat /etc/network/ifcfg-${interface} | grep HWADDR | LANG=c sed 's/HWADDR=//'`
+#  echo $harddress
+#  if [ -n "$harddress" ]; then
+#    ifconfig $interface hw ether $harddress
+#  fi
+  ifconfig $interface $ip $BROADCAST $NETMASK
+  echo "inter ip=$ip"
+  if [ "${IPADDR}" == "0.0.0.0" ]; then
+    echo "ip==0.0.0.0" >> /var/ip.txt
+  fi
+}
+
+update_routes()
+{
+  DEFRT=`ip route list | awk '/^default / { print $5 }'`
+  if [ "${DEFRT}" != "ppp0" ]; then
+    if [ -n "$router" ]; then
+      while route del default gw 0.0.0.0 dev $interface
+      do :
+      done
+
+      for i in $router ; do
+        route add default gw $i dev $interface
+		echo "default route=$i"
+      done
+    fi
+  fi
+}
+
+update_dns()
+{
+  DEFRT=`ip route list | awk '/^default / { print $5 }'`
+  if [ "${DEFRT}" != "ppp0" ]; then
+    (
+      flock -n 9
+      # save IPv6 dns
+      grep "#odhcp6c:$interface:" /etc/resolv.conf > /tmp/resolv.conf.tmp
+      cat /dev/null > $RESOLV_CONF
+      cat /dev/null > $LOCAL_RESOLV_CONF
+      for i in $dns ; do 
+        cat $RESOLV_CONF | grep -q $i || echo nameserver $i >> $RESOLV_CONF
+        cat $LOCAL_RESOLV_CONF | grep -q $i || echo nameserver $i >> $LOCAL_RESOLV_CONF
+      done
+      cat /tmp/resolv.conf.tmp >> $RESOLV_CONF
+    )9>/tmp/resolv.conf.lock
+    rm -f /tmp/resolv.conf.lock /tmp/resolv.conf.tmp
+  fi
+}
+
+deconfig()
+{
+  echo "deconfig"
+  ifconfig $interface up
+}
+
+update_interface_static()
+{
+  . /etc/network/ifcfg-$interface
+  
+  if [ -n "${IPADDR}" ]; then
+     ifconfig $interface ${IPADDR}
+	 echo "ifconfig IPADDR=${IPADDR}"
+	 if [ "${IPADDR}" == "0.0.0.0" ]; then
+	     echo "ipaddr==0.0.0.0" >> /var/ip.txt
+	 fi
+  fi
+  if [ -n "${NETMASK}" ]; then
+     ifconfig $interface netmask $NETMASK
+  fi
+  if [ -n "${BROADCAST}" ]; then
+     ifconfig $interface broadcast $BROADCAST
+  fi
+  if [ -n "${GATEWAY}" ]; then
+    DEFRT=`ip route list | awk '/^default / {print $5 }'`
+    if [ "${DEFRT}" != "ppp0" ] || [ "${DEFRT}" != "usb0" ]; then
+       while route del default gw 0.0.0.0 dev $interface
+       do :
+       done
+       
+       route add default gw $GATEWAY dev $interface
+    fi
+  fi
+}
+
+case "$1" in
+bound)
+  update_interface;
+  update_routes;
+  update_dns;
+  ;;
+renew)
+  update_interface;
+  update_routes;
+  update_dns;
+  ;;
+deconfig)
+  deconfig;
+  ;;
+leasefail)
+  update_interface_static;
+  update_dns;
+  ;;
+*)
+  echo "Usage: $0 {bound|renew|deconfig|leasefail} 1=$1"
+  deconfig;
+#  exit 1
+  ;;
+esac
+
+echo "$1" > /var/dhcp-${interface}.log
+
+exit 0

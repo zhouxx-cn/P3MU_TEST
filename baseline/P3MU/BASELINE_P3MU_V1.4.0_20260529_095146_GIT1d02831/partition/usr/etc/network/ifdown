@@ -1,0 +1,13 @@
+#!/bin/sh
+
+CONFIG=${1}
+
+# check root user priority
+if [ "$USER" != "root" ]; then
+   echo "only the root can down the device ${CONFIG}"
+   exit 1
+fi
+
+ip -o link set dev ${CONFIG} down 
+
+exit 0

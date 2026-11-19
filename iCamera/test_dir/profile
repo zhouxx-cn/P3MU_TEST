@@ -1,0 +1,85 @@
+#build TYPE for DVR_SDK and module
+TYPE=Hi3516CV610
+
+#产品类型(编译时需在此处选择相应产品类型)
+ifeq ($(PRODUCT_TYPE),)                
+#PRODUCT_TYPE=W84
+#PRODUCT_TYPE=G84
+#PRODUCT_TYPE=G63C
+PRODUCT_TYPE=W63C
+endif
+
+WITH_RTMP=no#
+WITH_AUTH=yes#
+SUPPORT_SD_CARD=yes#
+SUPPORT_128G_DISK=yes#
+IS_SUPPORT_PTZ_BUILTIN=yes#
+IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK=yes#
+USE_HOSTS_PARSER=yes#                        #接入ZWHOST(DNS)
+IR_CUT_AUTO_MANUAL=yes#                      #itCut夜视模式支持自动/手动
+IS_SOPPORT_ZOOM_OSD=yes#                     #变倍OSD
+IR_CUT_CONTROL_IMPROVE=yes#                  #灯板显示控制完善
+DOUBLE_LIGHT_NO_LDR_CUSTOM=yes#              #双光无光敏灯板定制
+USE_P2P_PUSH=yes#                            #使用P2P推送
+USE_FTP=no#                                  #使用FTP
+USE_EMAIL=no#                                #使用email
+USE_STRONG_PW=yes#                           #使用强密码
+USE_APPLY_DID_MANUAL=yes#                    #手动申请did
+NET_PROTOCOL_CONTROL=yes#                    #第三方协议配置控制是否加载
+SUPPORT_UPGRADE_V2=yes#
+IS_SUPPORT_AUTH_V2=yes#                      #授权V2版本
+IS_SUPPORT_UBOOT_RECOVER=yes#
+USE_CIRCLEQUEUE=yes#                         #支持共流缓冲区
+IS_SUPPORT_P6SMESSAGE=yes#                   #支持p6s云消息
+CLOSE_SWAP=yes#                              #SD卡是否关闭swap
+IS_SUPPORT_WLAN=no#                          #是否支持wifi 
+USE_MJPEG_CIRCLE_BUFFER=yes#                 #抓图使用mjpeg循环缓冲区
+IS_SUPPORT_AGINGTEST=yes#                    #老化测试
+IS_SUPPORT_APP_SHARE=yes#                    #APP分享功能
+IS_SUPPORT_P2P_MAXCLIENT=yes#                #p2p连接最大客户端后，连接新的客户端会进行剔除
+IS_SUPPORT_CLOUD_STORAGE=no#                 #支持云存储
+STATIC_LINK_STDC=yes#                        #链接 libstc++ 静态库
+IS_SUPPORT_PRODUCT_TEST_CUSTOM_SPEECH_FILES=no# #支持产测定制音频文件
+IS_SUPPORT_COMMON_DID_OPREATE=no#               #4G相关，支持普通号段为运营号段
+IS_SUPPORT_4G_CLOUD_DOMAIN=no#                  #4G相关，云存域名
+IS_SUPPORT_MULIT_CHANNEL=yes
+DEVICE_SUPPORT_CHANNEL_NUM=4
+
+STATIC=true
+
+#build debug 
+#DEBUG=true
+
+ifeq ($(PRODUCT_TYPE),W84)
+    IS_SUPPORT_WLAN=yes
+    IS_SUPPORT_HIS_BLUETOOTH=yes
+    IS_SUPPORT_CLOUD_STORAGE=yes
+else ifeq ($(PRODUCT_TYPE),G84)
+    IS_SUPPORT_WLAN=no
+    IS_SUPPORT_CLOUD_STORAGE=no
+    IS_SUPPORT_4G_MODULE=yes
+    IS_SUPPORT_SAVE_TF_LOG=yes
+    IS_SUPPORT_AUTO_SWITCH_WIFI_4G=no
+    IS_SUPPORT_COMMON_DID_OPREATE=no
+    IS_SUPPORT_4G_CLOUD_DOMAIN=yes
+    IS_SUPPORT_PRODUCT_TEST_CUSTOM_SPEECH_FILES=yes
+else ifeq ($(PRODUCT_TYPE),G63C)
+    IS_SUPPORT_WLAN=no
+    IS_SUPPORT_CLOUD_STORAGE=no
+    IS_SUPPORT_4G_MODULE=yes
+    IS_SUPPORT_SAVE_TF_LOG=yes
+    IS_SUPPORT_AUTO_SWITCH_WIFI_4G=no
+    IS_SUPPORT_COMMON_DID_OPREATE=no
+    IS_SUPPORT_4G_CLOUD_DOMAIN=yes
+    IS_SUPPORT_PRODUCT_TEST_CUSTOM_SPEECH_FILES=yes
+else ifeq ($(PRODUCT_TYPE),W63C)                                                                                                                                                                           
+    DEVICE_SUPPORT_CHANNEL_NUM=3
+    IS_SUPPORT_WLAN=yes
+    IS_SUPPORT_HIS_BLUETOOTH=yes
+    IS_SUPPORT_CLOUD_STORAGE=no
+    IS_SUPPORT_SAVE_TF_LOG=yes
+    IS_SUPPORT_PRODUCT_TEST_CUSTOM_SPEECH_FILES=yes
+    IS_SUPPORT_ZOOM=no
+endif
+
+

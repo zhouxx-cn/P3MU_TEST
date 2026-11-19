@@ -1,0 +1,1 @@
+CFLAGS += #-D__PRINT_ERROR__  #-D__PRINT_INFO__  #-D__PRINT_DEBUG__

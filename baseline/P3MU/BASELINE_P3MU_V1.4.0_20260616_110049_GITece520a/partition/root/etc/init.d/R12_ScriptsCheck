@@ -1,0 +1,38 @@
+#! /bin/sh
+
+exit 0;
+
+scripts_symbolic_link_check()
+{
+	if [ -n "$2" ]; then
+    	FileName=$2
+	else
+    	FileName=`basename $1`
+	fi
+    #echo "FileName=$FileName"
+
+    if [ -L "$FileName" ]; then
+        echo "FILE[$FileName] exists and is a symbolic link"
+    else
+        if [ -f "$FileName" ]; then
+            echo "FILE[$FileName] exists and not a symbolic link"
+            rm -rf $FileName
+        fi
+        echo "FILE[$FileName] symbolic link[$1]"
+        ln -s $1 $FileName
+    fi
+}
+
+echo "------------ Scripts Check -----------------"
+cd /mnt/mtd/etc/ppp
+scripts_symbolic_link_check /usr/etc/ppp/ppp-log.sh
+scripts_symbolic_link_check /usr/etc/ppp/ppp-off.sh
+scripts_symbolic_link_check /usr/etc/ppp/ppp-on.sh
+
+cd /mnt/mtd/etc/network
+scripts_symbolic_link_check /usr/etc/network/ifdown
+scripts_symbolic_link_check /usr/etc/network/ifup
+
+scripts_symbolic_link_check /usr/share/zoneinfo/Asia/Shanghai /mnt/mtd/etc/localtime
+
+cd /

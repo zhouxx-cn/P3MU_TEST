@@ -1,0 +1,58 @@
+1. 设备描述结构体定义
+#define MAX_NAME_LEN          32
+#define MAX_CHANNEL_NUM       32
+#define MAX_RS_CHANNEL        4
+typdef struct tagDeviceDescription
+{
+    DWORD dwBoardID;                              
+    char  szTypeName[MAX_NAME_LEN];       		   /*设备型谱名称，如HY-2016HC*/
+    BYTE  bytVideoStreamFormatCap[MAX_CHANNEL_NUM];          /*支持的视频编码格式 VIDEO_MPEG4\VIDEO_H264\VIDEO_ST*/
+    BYTE  bytAudioStreamFormatCap[MAX_CHANNEL_NUM];          /*支持的音频编码格式 AUDIO_G726/AUDIO_G729*/
+    BYTE  bytVideoSteamType[MAX_CHANNEL_NUM];                /*支持的码流类型， STREAM_MAIN/STREAM_SUB*/
+    BYTE  bytMainVideoSreamResolutionCap[MAX_CHANNEL_NUM];   /*主码流支持的压缩尺寸CR_CIF/CR_D1/CR_SD*/
+    BYTE  bytSubVideoSreamResolutionCap[MAX_CHANNEL_NUM];    /*子码流支持的压缩尺寸CR_CIF/CR_D1/CR_SD*/
+    BYTE  bytCoreFileType;                  		   /*媒体文件封装格式  FILE_MP4/FILE_ASF/FILE_AVI*/
+    BYTE  bytDecChannels;                  /*解码通道个数-----暂时保留，使用系统SDK的返回值*/
+    BYTE  bytAudioInChannels;              /*音频输入路数*/
+    BYTE  bytVideoInChannels;              /*视频输入路数-----暂时保留，使用系统SDK的返回值*/
+    BYTE  bytAudioOutChannels;             /*音频输出路数*/
+    BYTE  bytVoiceInChannels;              /*语音对讲输入路数*/
+    BYTE  bytSpotOutChannles;              /*SPOT输出路数*/
+    BYTE  bytLoopBackOutChannels;          /*环通输出路数*/
+    BYTE  bytKeyBoardInChannels;           /*键盘输入口路数*/
+    BYTE  bytAlarmInChannels;              /*报警输入路数*/
+    BYTE  bytAlarmOutChannels;             /*报警输出路数*/
+    BYTE  bytRS422Channels[MAX_RS_CHANNEL];          /*RS422个数 ：Bit7 ；Bit6 ~ Bit0 节点号  */
+    BYTE  bytRS232Channels[MAX_RS_CHANNEL];          /*RS232个数 ：Bit7 ；Bit6 ~ Bit0 节点号  */             
+    BYTE  bytRS485Channels[MAX_RS_CHANNEL];          /*RS485个数 ：Bit7 ；Bit6 ~ Bit0 节点号  */
+    BYTE  bytVGAChannels;                  /*VGA接口个数*/
+    BYTE  bytUSBChannels;                  /*USB接口个数*/
+    BYTE  bytCVBSPorts;                    /*复合视频输出端口个数*/
+    BYTE  bytSVideoPorts;                  /*S-Video视频输出端口个数*/
+    BYTE  bytIDEType;                      /*硬盘类型， IDE_ATA/IDE_SATA*/
+    BYTE  bytMaxDiskNums;                  /*支持的最大硬盘个数*/
+    BYTE  bytAimDetectSupport;             /*是否支持目标检测: Bit7; 区域个数： Bit6 ～　Bit0*/
+    BYTE  bytMotionDetectSupport;          /*是否支持运动检测*/
+    BYTE  bytMosaicSupport;                /*是否支持马赛克: Bit7; 区域个数： Bit6 ～　Bit0*/
+    DWORD dwReserved1;
+    DWORD dwReserved2;
+    DWORD dwReserved3;
+    DWORD dwReserved4;
+}DeviceDescription, *LPDeviceDescription;
+
+2. 设备描述共享库的规划
+   libddt.so   
+    
+   int  EDVRS_DDT_GetDeviceDescriptionByName(LPDeviceDescription pDD, const char* szTypeName);
+   int  EDVRS_DDT_GetDeviceDescriptionByID(LPDeviceDescription pDD, const int BoardID);
+   void EDVRS_DDT_EnumDeviceDescriptionTableStart();
+   int  EDVRS_DDT_EnumDeviceDescripiontTable(LPDeviceDescription pDD);
+   void EDVRS_DDT_EnumDeviceDescriptionTableStop();
+
+
+3.基本思想
+  a) 设备描述表固化在共享库中，随共享库的载入而载入内存，且为只读！
+  b) 当需要支持新型号设备时， 只需更新libddt.so即可！
+  c) EDVR启动时可以通过EDVRS_DDT_GetDeviceDescriptionByID来获取该型号设备是否被支持；如果支持，可同时获取设备的描述结构体；并根据此信息来定制设备软件功能！
+  d) 枚举接口函数保留作为后续调试用！
+

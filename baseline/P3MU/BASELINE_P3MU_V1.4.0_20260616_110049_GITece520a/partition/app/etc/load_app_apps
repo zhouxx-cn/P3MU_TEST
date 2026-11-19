@@ -1,0 +1,108 @@
+#! /bin/sh
+
+APP_MNT_PATH="/mnt/app"
+APP_RW_PATH="/tmp/app"
+WEB_MNT_PATH="/mnt/web"
+DBG_FLAG_FILE="/mnt/mtd/en_debug_mode"
+
+# 环境
+# mkdir /mnt/mtd/AlgoAuth
+# mkdir /mnt/mtd/model
+# export HASPUSER_PREFIX=/mnt/mtd/AlgoAuth
+# mkdir /storage/db
+
+# APP一些特殊的目录处理
+mkdir -p $APP_RW_PATH/device/capacity
+cp $APP_MNT_PATH/device/capacity/DeviceCap.xml $APP_RW_PATH/device/capacity/
+cp $APP_MNT_PATH/device/capacity/LightCap.xml $APP_RW_PATH/device/capacity/
+
+# 点阵文件目录,[TODO 是不是可以去掉]
+mkdir -p $APP_RW_PATH/res
+
+# SD卡挂载目录
+mkdir -p $APP_RW_PATH/disk/mmcblk0p1
+
+# 升级临时文件夹
+mkdir -p $APP_RW_PATH/upgrade
+
+# 一些文件缓存分区
+mkdir -p /tmp/video/
+mkdir -p /tmp/picture/
+mkdir -p /tmp/picture/pic_for_email
+mkdir -p /tmp/picture/pic_for_sd
+mkdir -p /tmp/picture/pic_for_ftp
+mkdir -p /tmp/picture/pic_for_mem
+
+# 系统配置
+# echo 1 > /proc/sys/vm/dirty_ratio
+# echo 1 > /proc/sys/vm/dirty_background_ratio
+# echo 100 > /proc/sys/vm/dirty_expire_centisecs
+# echo 50 > /proc/sys/vm/dirty_writeback_centisecs
+# echo 1024 > /proc/sys/vm/min_free_kbytes
+# echo 1 > /proc/sys/vm/overcommit_memory
+
+# 配置分区检查
+echo "[XRS][Config] Check Config Files"
+/mnt/app/scripts/checkConfig.sh
+
+# 加载网络
+/mnt/app/etc/load_net
+
+# 音频通路配置
+echo "[XRS][Audio] Audio Config"
+#tinymix set 33 1
+#tinymix set 32 4
+#tinymix set 25 174
+
+# 硬件相关配置
+echo "[XRS][HW] GPIO Config"
+
+# BoardAuthInit
+echo "[XRS] Start Board Authorize..."
+#/mnt/app/bin/BoardAuthInit
+
+# wifidetect
+echo "[XRS] Run wifi_detect..."
+#/mnt/app/bin/wifi_detect id
+#/mnt/app/bin/wifi_detect noInsmodWifi
+
+# SD卡检查
+#/mnt/app/bin/checkSDCard 1
+
+# 不使用系统时区设置
+# rm -rf /mnt/mtd/etc/localtime
+
+#hwclock -s
+LOCALTIME=`date | awk '{print $4}'`
+if [ $LOCALTIME \< 2022 ]
+then
+        echo "reset system time"
+        date 2022.01.01-00:00
+#       hwclock -w &
+fi
+#hwclock --systohc &
+
+# 启动BOA
+HTTP_HOME="/mnt/web/http"
+BOA_CFG="/mnt/mtd/etc/conf.d/boa/boa.conf"
+echo "[XRS] Run boa, Http-Home: $HTTP_HOME, Boa-Cfg: $BOA_CFG"
+#/mnt/app/bin/boa -c $HTTP_HOME -f $BOA_CFG
+
+#清空算法模型
+rm -rf /mnt/mtd/model/*
+
+if [ -f $DBG_FLAG_FILE ]; then
+    echo "[XRS] Into Manual Mode!"
+    telnetd -l /bin/sh
+else
+    echo "[XRS] Into Auto Mode!"
+    telnetd -l /bin/sh
+    if [ -e /storage/board ]; then
+        cd  /storage/board/release_16dv500/
+        ./PQTools.sh -a sc401ai_sc200ai_slave 11
+    fi
+#    /mnt/app/bin/MonitorProcess & > /dev/console
+#	cd /mnt/app/bin/
+#    /mnt/app/bin/xrscam &
+#	/mnt/app/bin/myWatchDogProcess &
+fi

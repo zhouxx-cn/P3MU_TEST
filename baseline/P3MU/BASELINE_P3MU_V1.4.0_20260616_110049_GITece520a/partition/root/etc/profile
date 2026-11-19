@@ -1,0 +1,55 @@
+#
+# /etc/profile: system-wide .profile file for the Bourne shells
+#
+
+set_path_before()
+{
+	[ -d $1 ] && PATH="$1:$PATH"
+}
+
+insmod_check()
+{
+	if [ -f $1 ]; then
+		insmod $*
+	fi
+}
+
+alias la='ls -a'
+alias ll='ls -l'
+alias lh='ls -h'
+alias insmod='insmod_check'
+
+PATH="/bin:/sbin:/usr/bin:/usr/sbin:/var/modules:/mnt/app/bin:/mnt/oem/bin"
+set_path_before /usr/local/sbin
+set_path_before /usr/local/bin
+
+LD_LIBRARY_PATH="/lib:/lib64:/usr/lib:/usr/local/lib:/mnt/model/lib:/mnt/app/lib:/mnt/oem/lib"
+
+export PATH
+export LD_LIBRARY_PATH
+
+# udev param
+UDEV_CONFIG_FILE="/etc/udev/udev.conf"
+UDEV_RULES_FILE="/etc/udev/rules.d"
+export UDEV_CONFIG_FILE
+export UDEV_RULES_FILE
+
+# time zone
+#export TZ=/etc/localtime
+
+# ANSI COLORS
+CRE="
+[K"
+NORMAL="[0;39m"
+RED="[1;31m"
+GREEN="[1;32m"
+YELLOW="[1;33m"
+BLUE="[1;34m"
+MAGENTA="[1;35m"
+CYAN="[1;36m"
+WHITE="[1;37m"
+
+umask 022
+
+echo "${GREEN}Welcome to Ruision Linux.${NORMAL}"
+

@@ -1,0 +1,35 @@
+#! /bin/sh
+
+DEV_NAME=$1
+DEV_HWID=$2
+
+/usr/etc/udev/rules.d/udev_device_rule.sh
+
+echo "---------load disk----------"
+
+case $DEV_NAME in
+MEG_EYE_W4K_*)
+    insmod fat.ko
+    insmod vfat.ko
+    insmod msdos.ko
+    insmod exfat.ko
+    #insmod usb-storage.ko
+    #insmod sd_mod.ko
+	;;
+MEG_EYE_D3X_* | MEG_EYE_C2X_*)
+	;;
+*)
+	i=1
+	while [ $i -le 3 ]; do
+		echo "load net modules, unsupported DEV_NAME: "$DEV_NAME > /dev/kmsg
+		sleep 1
+		let i+=1
+	done
+	;;
+esac
+
+insmod ch341.ko
+
+echo "---------udev start----------"
+udevadm trigger --action=add
+

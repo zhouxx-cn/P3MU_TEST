@@ -1,0 +1,12 @@
+#!/bin/sh
+
+echo "*Welcome to Into Zview Series Interface*";
+
+DebugMode=`fw_printenv -n ptzsupport`;
+
+if [ "$DebugMode" -eq 0 ];then
+	echo "*Into Debug Mode*";
+	/bin/login;
+else
+	echo "*Into PTZ Mode*";
+fi

@@ -1,0 +1,22 @@
+#! /bin/sh
+
+CPWD=$(pwd)
+
+Dir_File_Check_Deal()
+{
+	for file in *; do
+		if [ -f $file ]; then
+			cp $file /var
+			ERR_ECHO=$(echo $?)
+			if [ $ERR_ECHO -eq 1 ]; then
+				rm -f $file
+			fi
+			rm -f /var/$file
+		fi
+	done
+}
+
+cd /mnt/mtd/log
+Dir_File_Check_Deal
+
+cd $CPWD

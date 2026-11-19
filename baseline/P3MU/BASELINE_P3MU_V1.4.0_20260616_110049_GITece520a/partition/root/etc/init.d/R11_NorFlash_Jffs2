@@ -1,0 +1,53 @@
+#! /bin/sh
+
+if [ -e /mpart/usr/ko/jz_sfc.ko ]; then
+    insmod /mpart/usr/ko/jz_sfc.ko
+else
+    echo "!!! Not Found jz_sfc.ko"
+fi
+
+if [ -e /mpart/usr/ko/jffs2.ko ]; then
+    insmod /mpart/usr/ko/zlib_deflate.ko
+    insmod /mpart/usr/ko/jffs2.ko
+else
+    echo "!!! Not Found jffs2.ko"
+fi
+
+if [ -e /mpart/usr/ko/squashfs.ko ]; then
+    insmod /mpart/usr/ko/squashfs.ko
+else
+    echo "!!! Not Found squashfs.ko"
+fi
+
+mount -t jffs2 /dev/mtdblock`mtdnum data` /data -o sync
+if [ $? != 0 ]; then
+    flash_eraseall /dev/mtd`mtdnum data`
+    mount -t jffs2 /dev/mtdblock`mtdnum data` /data -o sync
+fi
+
+if [ ! "`mtdnum back`"x = "NULL"x ]; then
+    mount -t jffs2 /dev/mtdblock`mtdnum back` /back -o sync
+else
+    echo "Not-Found Partition 'back'."
+fi
+
+if [ ! "`mtdnum storage`"x = "NULL"x ]; then
+    mount -t jffs2 /dev/mtdblock`mtdnum storage` /storage -o sync
+else
+    echo "Not-Found Partition 'storage'."
+fi
+
+if [ ! -e /data/logo ]; then
+    echo "Not-Found /data/logo, recover."
+    mkdir /data/logo
+fi
+
+if [ ! -e /data/config ]; then
+    echo "Not-Found /data/config, recover."
+    mkdir /data/config
+fi
+
+mount /data/logo /mnt/logo
+mount /data/config /mnt/mtd
+
+/etc/init.d/MPart_Mount /data /datb

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+CONFIG=${1}
+
+# check root user priority
+if [ "$USER" != "root" ] ; then
+   echo "only the root can down the device ${CONFIG}"
+   exit 1
+fi
+
+# clear ip
+ifconfig ${CONFIG} 0.0.0.0
+ip -o link set dev ${CONFIG} down
+
+killall -9 wpa_supplicant
+kill `ps | grep ${CONFIG} | awk '/udhcp/{print $1}'`
+
+# restart eth0
+/etc/network/ifup eth0
+
+exit 0

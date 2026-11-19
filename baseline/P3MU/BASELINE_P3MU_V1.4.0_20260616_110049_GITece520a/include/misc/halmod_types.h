@@ -1,0 +1,1350 @@
+/**
+****************************************************************************************
+ * @FilePath: halmod_types.h
+ * @Author: HL.LIU
+ * @Date: 2022-09-01 21:12:46
+ * @LastEditors: 
+ * @LastEditTime: 2022-09-01 21:12:46
+ * @Copyright: 2022 RUISION CO.,LTD. All Rights Reserved.
+ * @Descripttion: 
+****************************************************************************************
+*/
+#ifndef __HALMOD_TYPES_H__
+#define __HALMOD_TYPES_H__
+
+#include "xrsdef.h"
+#include "mauth_types.h"
+#include "upgrade_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+typedef enum
+{
+    HALMOD_DEVTYPE_OFT_HISILICON= 0, 
+    HALMOD_DEVTYPE_OFT_AXERA    = 128, 
+    HALMOD_DEVTYPE_OFT_ROCKCHIP = 256, 
+} HALMOD_DEVTYPE_OFT_E;
+
+/* 机型:可唯一标识一种具体机型 */
+typedef enum
+{
+    HALMOD_DEVTYPE_INVALID          = -1, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E7   = HALMOD_DEVTYPE_OFT_HISILICON, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_I51, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_I52, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_I31, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_I32, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E7S, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E81, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_MC40 = HALMOD_DEVTYPE_OFT_AXERA, 
+    HALMOD_DEVTYPE_MEG_EYE_D3X_240_P, 
+    HALMOD_DEVTYPE_MEG_EYE_D3X_24A_P, 
+    HALMOD_DEVTYPE_MEG_EYE_C2X_240_P, 
+    HALMOD_DEVTYPE_MEG_EYE_C2X_340_P, 
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E75  = HALMOD_DEVTYPE_OFT_ROCKCHIP,
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E75_W,
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E75_WT,      /* Base: HALMOD_DEVTYPE_MEG_EYE_W4K_E75_W, ETag: HALMOD_DEVTYPE_MEG_EYE_W4K_E75_WT_ETAG */
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E75_W4G,
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E75_T2W4G,   /* Base: HALMOD_DEVTYPE_MEG_EYE_W4K_E75_W4G, ETag: HALMOD_DEVTYPE_MEG_EYE_W4K_E75_T2W4G_ETAG */
+#if 0 /* For Extend, e.g: */
+    HALMOD_DEVTYPE_MEG_EYE_W4K_E75_XXXX,    /* Base: WIFI, ETag: 3 */
+#endif
+    HALMOD_DEVTYPE_BUTT
+} HALMOD_DEVTYPE_E;
+
+#define HALMOD_DEVTYPE_MEG_EYE_W4K_E75_WT_ETAG      (HALMOD_DEVTYPE_MEG_EYE_W4K_E75_WT - HALMOD_DEVTYPE_MEG_EYE_W4K_E75_W)
+#define HALMOD_DEVTYPE_MEG_EYE_W4K_E75_T2W4G_ETAG   (HALMOD_DEVTYPE_MEG_EYE_W4K_E75_T2W4G - HALMOD_DEVTYPE_MEG_EYE_W4K_E75_W4G)
+
+/* BomId: 用于同种机型不同硬件差异区分(升级限制,升级文件BomId大于等于硬件BomId方可升级) */
+typedef enum
+{
+    HALMOD_BOMID_TYPE_INVALID   = -1,   /* BomId无效 */
+#if (defined(PLATFORM_BOARD_MI3X) || defined(CONFIG_MVCA_BOARD_MI3X) || defined(BOARD_MI3X_ENABLE))
+    HALMOD_BOMID_TYPE_WBT_LENS  = 0,    /* 伍佰特镜头 */
+    HALMOD_BOMID_TYPE_TRC_LENS,         /* 特莱斯镜头 */
+    /* PLATFORM_BOARD_MI3X or CONFIG_MVCA_BOARD_MI3X or BOARD_MI3X_ENABLE */
+#elif (defined(PLATFORM_BOARD_ME75) || defined(CONFIG_MVCA_BOARD_ME75))
+    HALMOD_BOMID_TYPE_MEG_EYE_W4K_E75 = 0,  /* 基础款 */
+    HALMOD_BOMID_TYPE_MEG_EYE_W4K_E75_W,    /* WIFI */
+    HALMOD_BOMID_TYPE_MEG_EYE_W4K_E75_W4G,  /* WIFI/4G */
+    HALMOD_BOMID_TYPE_VER3,
+    HALMOD_BOMID_TYPE_VER4,
+    HALMOD_BOMID_TYPE_VER5,
+    HALMOD_BOMID_TYPE_VER6,
+    HALMOD_BOMID_TYPE_VER7,
+    /* PLATFORM_BOARD_ME75 or CONFIG_MVCA_BOARD_ME75 */    
+#endif
+    HALMOD_BOMID_TYPE_BUTT
+} HALMOD_BOMID_TYPE_E;
+#define HALMOD_BOMID_TYPE_MAX   HALMOD_BOMID_TYPE_BUTT
+
+/* LcdId: 用于同种机型不同LCD屏幕区分 */
+typedef enum
+{
+    HALMOD_LCDID_TYPE_INVALID   = -1,   /* LcdId无效 */
+#if (defined(PLATFORM_BOARD_ME8X) || defined(CONFIG_MVCA_BOARD_ME8X))
+    HALMOD_LCDID_TYPE_TRULY  = 0,       /* 信利 */
+    HALMOD_LCDID_TYPE_FRIDA,            /* 福瑞达 */
+    HALMOD_LCDID_TYPE_SR,               /* 上融客户[定制] */
+    /* PLATFORM_BOARD_ME8X or CONFIG_MVCA_BOARD_ME8X */
+#elif (defined(PLATFORM_BOARD_ME75) || defined(CONFIG_MVCA_BOARD_ME75))
+    HALMOD_LCDID_TYPE_GD = 0,           /* 国显 */
+    /* PLATFORM_BOARD_ME75 or CONFIG_MVCA_BOARD_ME75 */
+#endif
+    HALMOD_LCDID_TYPE_BUTT
+} HALMOD_LCDID_TYPE_E;
+#define HALMOD_LCDID_TYPE_MAX   HALMOD_LCDID_TYPE_BUTT
+
+typedef enum
+{
+    HALMOD_BEEP_OFF = 0,    /* 关闭蜂鸣器 */
+    HALMOD_BEEP_ON,         /* 打开蜂鸣器 */
+    HALMOD_BEEP_ONCE,       /* 蜂鸣一次 */
+    HALMOD_BEEP_STAT_BUTT
+} HALMOD_BEEP_STAT_E;
+
+typedef enum
+{
+    HALMOD_POWER_TYPE_HDD = 0,  /* 硬盘类电源 */
+    HALMOD_POWER_TYPE_USB,      /* USB类电源 */
+    HALMOD_POWER_TYPE_LCD,	    /* ATM LCD电源 */
+    HALMOD_POWER_TYPE_ETH,	    /* 网络设备 */
+    HALMOD_POWER_TYPE_SOFT,	    /* 软关机 */
+    HALMOD_POWER_TYPE_BUTT
+} HALMOD_POWER_TYPE_E;
+
+typedef enum
+{
+    HALMOD_POWER_STAT_OFF = 0,  /* 电源关闭 */
+    HALMOD_POWER_STAT_ON        /* 电源打开 */
+} HALMOD_POWER_STAT_E;
+
+typedef enum
+{
+    HALMOD_POWER_HDD0 = 0,  /* 第一个硬盘电源 */
+    HALMOD_POWER_HDD1,
+    HALMOD_POWER_HDD2,
+    HALMOD_POWER_HDD3,
+    HALMOD_POWER_HDD4,
+    HALMOD_POWER_HDD5,
+    HALMOD_POWER_HDD6,
+    HALMOD_POWER_HDD7,
+    HALMOD_POWER_HDD_BUTT
+} HALMOD_POWER_HDD_E;
+
+typedef enum
+{
+    HALMOD_POWER_USB0 = 0,  /* 第一个USB电源 */
+    HALMOD_POWER_USB1,
+    HALMOD_POWER_USB2,
+    HALMOD_POWER_USB3,
+    HALMOD_POWER_USB_BUTT
+} HALMOD_POWER_USB_E;
+
+typedef enum
+{
+    HALMOD_LED_TYPE_ALARM_IN = 0,   /* 报警输入类指示灯 */
+    HALMOD_LED_TYPE_ALARM_OUT,      /* 报警输出类指示灯 */
+    HALMOD_LED_TYPE_VI,             /* 视频输入类指示灯 */
+    HALMOD_LED_TYPE_POWER,          /* 电源类指示灯 */
+    HALMOD_LED_TYPE_REC,            /* 录像类指示灯 */
+    HALMOD_LED_TYPE_NET,            /* 网络类指示灯 */
+    HALMOD_LED_TYPE_REMOTE,         /* 遥控器锁定指示灯 */
+    HALMOD_LED_TYPE_CONSOLE,        /* 云台操作指示灯 */
+    HALMOD_LED_TYPE_DIAL_STATE,     /* 拨号状态指示灯 */
+    HALMOD_LED_TYPE_FAULT,          /* 故障状态指示灯 */
+    HALMOD_LED_TYPE_OTREC,          /* 一键录像灯 */
+    HALMOD_LED_TYPE_POWER_SUB,      /* 一键录像电源灯 */
+    HALMOD_LED_TYPE_BUTT
+} HALMOD_LED_TYPE_E;
+
+typedef enum
+{
+    HALMOD_LED_ALARM_IN0 = 0,   /* 报警输入指示灯 */
+    HALMOD_LED_ALARM_IN1,
+    HALMOD_LED_ALARM_IN2,
+    HALMOD_LED_ALARM_IN3,
+    HALMOD_LED_ALARM_IN4,
+    HALMOD_LED_ALARM_IN5,
+    HALMOD_LED_ALARM_IN6,
+    HALMOD_LED_ALARM_IN7,
+    HALMOD_LED_ALARM_IN_BUTT
+} HALMOD_LED_ALARM_IN_E;
+
+typedef enum
+{
+    HALMOD_LED_ALARM_OUT0 = 0,  /* 报警输出指示灯 */
+    HALMOD_LED_ALARM_OUT1,
+    HALMOD_LED_ALARM_OUT2,
+    HALMOD_LED_ALARM_OUT3,
+    HALMOD_LED_ALARM_OUT4,
+    HALMOD_LED_ALARM_OUT5,
+    HALMOD_LED_ALARM_OUT6,
+    HALMOD_LED_ALARM_OUT7,
+    HALMOD_LED_ALARM_OUT_BUTT
+} HALMOD_LED_ALARM_OUT_E;
+
+typedef enum
+{
+    HALMOD_LED_VI0 = 0, /* 视频输入指示灯 */
+    HALMOD_LED_VI1,
+    HALMOD_LED_VI2,
+    HALMOD_LED_VI3,
+    HALMOD_LED_VI4,
+    HALMOD_LED_VI5,
+    HALMOD_LED_VI6,
+    HALMOD_LED_VI7,
+    HALMOD_LED_VI_BUTT
+} HALMOD_LED_VI_E;
+
+typedef enum
+{
+    HALMOD_LED_POWER_DEV = 0,   /* 机器电源指示灯 */
+    HALMOD_LED_POWER_HDD0,      /* 硬盘电源指示灯 */
+    HALMOD_LED_POWER_HDD1,
+    HALMOD_LED_POWER_HDD2,
+    HALMOD_LED_POWER_HDD3,
+    HALMOD_LED_POWER_HDD4,
+    HALMOD_LED_POWER_HDD5,
+    HALMOD_LED_POWER_HDD6,
+    HALMOD_LED_POWER_HDD7,
+    HALMOD_LED_POWER_BUTT
+} HALMOD_LED_POWER_E;
+
+typedef enum
+{
+    HALMOD_LED_REC0 = 0,    /* 录像指示灯 */
+    HALMOD_LED_REC1,
+    HALMOD_LED_REC2,
+    HALMOD_LED_REC3,
+    HALMOD_LED_REC4,
+    HALMOD_LED_REC5,
+    HALMOD_LED_REC6,
+    HALMOD_LED_REC7,
+    HALMOD_LED_REC8,
+    HALMOD_LED_REC9,
+    HALMOD_LED_REC10,
+    HALMOD_LED_REC11,
+    HALMOD_LED_REC12,
+    HALMOD_LED_REC13,
+    HALMOD_LED_REC14,
+    HALMOD_LED_REC15,
+    HALMOD_LED_REC_BUTT
+} HALMOD_LED_REC_E;
+
+typedef enum
+{
+    HALMOD_LED_NET_LINK = 0,    /* 网络指示灯 */
+    HALMOD_LED_NET_ACT,
+    HALMOD_LED_NET_BUTT
+} HALMOD_LED_NET_E;
+
+typedef enum
+{
+    HALMOD_LED_REMOTE0 = 0,     /* 遥控器锁定指示灯 */
+    HALMOD_LED_REMOTE1,
+    HALMOD_LED_REMOTE2,
+    HALMOD_LED_REMOTE3,
+    HALMOD_LED_REMOTE4,
+    HALMOD_LED_REMOTE5,
+    HALMOD_LED_REMOTE6,
+    HALMOD_LED_REMOTE7,
+    HALMOD_LED_REMOTE_BUTT
+} HALMOD_LED_REMOTE_E;
+
+typedef enum
+{
+    HALMOD_LED_CONSOLE0 = 0,    /* 云台操作指示灯 */
+    HALMOD_LED_CONSOLE1,
+    HALMOD_LED_CONSOLE2,
+    HALMOD_LED_CONSOLE3,
+    HALMOD_LED_CONSOLE4,
+    HALMOD_LED_CONSOLE5,
+    HALMOD_LED_CONSOLE6,
+    HALMOD_LED_CONSOLE7,
+    HALMOD_LED_CONSOLE_BUTT
+} HALMOD_LED_CONSOLE_E;
+
+typedef enum
+{
+    HALMOD_LED_DIAL_STAT0 = 0, /* 拨号状态指示灯 */
+    HALMOD_LED_DIAL_STAT1,
+    HALMOD_LED_DIAL_STAT2,
+    HALMOD_LED_DIAL_STAT3,
+    HALMOD_LED_DIAL_STAT4,
+    HALMOD_LED_DIAL_STAT5,
+    HALMOD_LED_DIAL_STAT6,
+    HALMOD_LED_DIAL_STAT7,
+    HALMOD_LED_DIAL_STAT_BUTT
+} HALMOD_LED_DIAL_STAT_E;
+
+typedef enum
+{
+    HALMOD_LED_OFF = 0, /* LED灯打开 */
+    HALMOD_LED_ON,      /* LED灯关闭 */
+    HALMOD_LED_STAT_BUTT
+} HALMOD_LED_STAT_E;
+
+typedef enum
+{
+    HALMOD_POWER_DEV_ETH = 0,  /* */
+    HALMOD_POWER_DEV_WIFI,
+    HALMOD_POWER_DEV_BT,
+    HALMOD_POWER_DEV_4G,
+    HALMOD_POWER_DEV_BT_WAKE,
+    HALMOD_POWER_DEV_BUTT
+} HALMOD_POWER_ETH_E;
+
+typedef enum
+{
+    HALMOD_REG_BIT0 = 0,    /* 寄存器第0位 */
+    HALMOD_REG_BIT1, 
+    HALMOD_REG_BIT2, 
+    HALMOD_REG_BIT3, 
+    HALMOD_REG_BIT4, 
+    HALMOD_REG_BIT5, 
+    HALMOD_REG_BIT6, 
+    HALMOD_REG_BIT7, 
+    HALMOD_REG_BIT8, 
+    HALMOD_REG_BIT9, 
+    HALMOD_REG_BIT10, 
+    HALMOD_REG_BIT11, 
+    HALMOD_REG_BIT12, 
+    HALMOD_REG_BIT13, 
+    HALMOD_REG_BIT14, 
+    HALMOD_REG_BIT15, 
+    HALMOD_REG_BIT16, 
+    HALMOD_REG_BIT17, 
+    HALMOD_REG_BIT18, 
+    HALMOD_REG_BIT19, 
+    HALMOD_REG_BIT20, 
+    HALMOD_REG_BIT21, 
+    HALMOD_REG_BIT22, 
+    HALMOD_REG_BIT23, 
+    HALMOD_REG_BIT24, 
+    HALMOD_REG_BIT25, 
+    HALMOD_REG_BIT26, 
+    HALMOD_REG_BIT27, 
+    HALMOD_REG_BIT28, 
+    HALMOD_REG_BIT29, 
+    HALMOD_REG_BIT30, 
+    HALMOD_REG_BIT31, 
+    HALMOD_REG_BIT_BUTT
+} HALMOD_REG_BIT_E;
+
+typedef enum
+{
+    HALMOD_ALARM_ALWAYS_OPEN = 0,   /* 常开状态,即低电平状态,高电平触发报警 */
+    HALMOD_ALARM_ALWAYS_CLOSE,      /* 常闭状态,即高电平状态,低电平触发报警 */
+    HALMOD_ALARM_INTYPE_BUTT
+} HALMOD_ALARM_INTYPE_E;
+
+typedef enum
+{
+    HALMOD_ALARM_OUT_OFF = 0,   /* 输出关闭 */
+    HALMOD_ALARM_OUT_ON,        /* 输出打开 */
+    HALMOD_ALARM_OUT_STAT_BUTT
+} HALMOD_ALARM_OUT_STAT_E;
+
+typedef enum
+{
+    MODE_NTSC = 1,
+    MODE_PAL,
+    MODE_NTSC_960,
+    MODE_PAL_960,
+    MODE_NTSC_720P,
+    MODE_PAL_720P,
+    MODE_NTSC_1080P,
+    MODE_PAL_1080P,
+    MODE_720P_50,
+    MODE_720P_60
+} HALMOD_VIDEO_MODE_E;
+
+typedef enum
+{
+    EQ_CABLE_CAT5 = 0,  /* 五类线 */
+    EQ_CABLE_COAX = 1,  /* 同轴线 */
+    EQ_CABLE_TYPE_BUTT
+} HALMOD_EQ_CABLE_TYPE_E;
+
+typedef enum
+{
+    HALMOD_EQ_CABLE_LEN_200 = 0,   /* 线长200米 */
+    HALMOD_EQ_CABLE_LEN_250,
+    HALMOD_EQ_CABLE_LEN_300,
+    HALMOD_EQ_CABLE_LEN_350,
+    HALMOD_EQ_CABLE_LEN_400,
+    HALMOD_EQ_CABLE_LEN_450,
+    HALMOD_EQ_CABLE_LEN_500,
+    HALMOD_EQ_CABLE_LEN_550,
+    HALMOD_EQ_CABLE_LEN_600,
+    HALMOD_EQ_CABLE_LEN_650,
+    HALMOD_EQ_CABLE_LEN_700,
+    HALMOD_EQ_CABLE_LEN_750,
+    HALMOD_EQ_CABLE_LEN_800,
+    HALMOD_EQ_CABLE_LEN_850,
+    HALMOD_EQ_CABLE_LEN_900,
+    HALMOD_EQ_CABLE_LEN_BUTT,
+} HALMOD_EQ_CABLE_LEN_E;
+
+typedef enum
+{
+    HALMOD_VRES_720H        = 0,    /* 720H普清P制 */
+    HALMOD_VRES_960H,               /* 960H标清P制 */
+    HALMOD_VRES_720P,	            /* 720P25高清P制 */
+    HALMOD_VRES_1080P,              /* 1080P25全高清P制 */
+    HALMOD_VRES_720H_N,             /* 720H普清N制 */
+    HALMOD_VRES_960H_N,             /* 960H标清N制 */
+    HALMOD_VRES_720P_N,             /* 720P30高清N制 */
+    HALMOD_VRES_1080P_N,            /* 1080P30全高清N制 */
+    HALMOD_VRES_720P_50,            /* 720P50 */
+    HALMOD_VRES_720P_60     = 9,    /* 720P60 */
+    HALMOD_VRES_AHD_5M_25P  = 10,
+    HALMOD_VRES_AHD_5M_20P,
+    HALMOD_VRES_AHD_5M_12P,
+    HALMOD_VRES_AHD_4M_30P,
+    HALMOD_VRES_AHD_4M_25P,
+    HALMOD_VRES_AHD_4M_15P,
+    HALMOD_VRES_AHD_3M_30P,
+    HALMOD_VRES_AHD_3M_25P,
+    HALMOD_VRES_AHD_3M_18P,
+    HALMOD_VRES_AHD_2M_12P,         /* 1080P 12.5pbs */
+    HALMOD_VRES_TVI_5M_12P  = 20,
+    HALMOD_VRES_TVI_3M_18P,
+    HALMOD_VRES_TVI_1080P25,
+    HALMOD_VRES_TVI_1080P30,        /* T1080P 30P */
+    HALMOD_VRES_TVI_720P50,
+    HALMOD_VRES_TVI_720P60,
+    HALMOD_VRES_TVI_720PA25,
+    HALMOD_VRES_TVI_720PB25,
+    HALMOD_VRES_TVI_720PA30,        /* T720P 30P */
+    HALMOD_VRES_TVI_720PB30,        /* T720P 30P */
+    HALMOD_VRES_CVI_1080P25 = 30,
+    HALMOD_VRES_CVI_1080P30,
+    HALMOD_VRES_CVI_720P50,
+    HALMOD_VRES_CVI_720P60,
+    HALMOD_VRES_CVI_720P30,
+    HALMOD_VRES_CVI_720P25,
+    HALMOD_VRES_NOVIDEO_1080P,
+    HALMOD_VRES_BUTT
+} HALMOD_VRES_E;
+
+/* net speed */
+typedef enum
+{
+    HALMOD_NET_SPEED_010Mb = 0, /* 010Mbits */
+    HALMOD_NET_SPEED_100Mb,     /* 100Mbits */
+    HALMOD_NET_SPEED_001Gb,     /* 001Gbits */
+    HALMOD_NET_SPEED_010Gb,     /* 010Gbits */
+    HALMOD_NET_SPEED_BUTT       /* END */
+} HALMOD_NET_SPEED_E;
+
+typedef enum
+{
+    HALMOD_NET_DUPLEX_HALF = 0, /* half duplex */
+    HALMOD_NET_DUPLEX_FULL,     /* full duplex */
+    HALMOD_NET_DUPLEX_BUTT
+} HALMOD_NET_DUPLEX_E;
+
+typedef enum
+{
+    HALMOD_NET_AUTONEG_DISABLE = 0, /* 手动模式 */
+    HALMOD_NET_AUTONEG_ENABLE,      /* 自适应模式 */
+    HALMOD_NET_AUTONEG_BUTT
+} HALMOD_NET_AUTONEG_E;
+
+typedef enum
+{
+    HALMOD_VIDEO_FORMAT_NONE        = 0,
+    HALMOD_VIDEO_FORMAT_1080P60,
+    HALMOD_VIDEO_FORMAT_1080P50,
+    HALMOD_VIDEO_FORMAT_1080P30,
+    HALMOD_VIDEO_FORMAT_1080P25     = 4,
+    HALMOD_VIDEO_FORMAT_1080P24,
+    HALMOD_VIDEO_FORMAT_720P60,
+    HALMOD_VIDEO_FORMAT_720P50,
+    HALMOD_VIDEO_FORMAT_720P30,
+    HALMOD_VIDEO_FORMAT_720P25      = 9,
+    HALMOD_VIDEO_FORMAT_720P24,
+    HALMOD_VIDEO_FORMAT_PAL,
+    HALMOD_VIDEO_FORMAT_NTSC        = 12,
+    HALMOD_VIDEO_FORMAT_ANRT_5M20P,
+    HALMOD_VIDEO_FORMAT_ANRT_5M12P,
+    HALMOD_VIDEO_FORMAT_ART_3M30P,
+    HALMOD_VIDEO_FORMAT_ART_3M25P,
+    HALMOD_VIDEO_FORMAT_ANRT_3M18P,
+    HALMOD_VIDEO_FORMAT_ART_4M30P,
+    HALMOD_VIDEO_FORMAT_ART_4M25P,
+    HALMOD_VIDEO_FORMAT_ANRT_4M15P  = 20,
+    HALMOD_VIDEO_FORMAT_TNRT_5M12P  = 40,
+    HALMOD_VIDEO_FORMAT_TNRT_3M18P,
+    HALMOD_VIDEO_FORMAT_T1080P30,
+    HALMOD_VIDEO_FORMAT_T1080P25,
+    HALMOD_VIDEO_FORMAT_T720P60,
+    HALMOD_VIDEO_FORMAT_T720P50,
+    HALMOD_VIDEO_FORMAT_T720P30A,
+    HALMOD_VIDEO_FORMAT_T720P30B,
+    HALMOD_VIDEO_FORMAT_T720P25B,
+    HALMOD_VIDEO_FORMAT_T720P24A    = 49,
+    HALMOD_VIDEO_FORMAT_C1080P30    = 60,
+    HALMOD_VIDEO_FORMAT_C1080P25,
+    HALMOD_VIDEO_FORMAT_C720P60,
+    HALMOD_VIDEO_FORMAT_C720P50,
+    HALMOD_VIDEO_FORMAT_C720P30,
+    HALMOD_VIDEO_FORMAT_C720P25     = 65,
+    HALMOD_VIDEO_FORMAT_EXT
+} HALMOD_VIDEO_FORMAT_E;
+
+typedef enum
+{
+    HALMOD_AD_PELCO_CMD_RESET       = 0,
+    HALMOD_AD_PELCO_CMD_SET,
+    HALMOD_AD_PELCO_CMD_UP,
+    HALMOD_AD_PELCO_CMD_DOWN,
+    HALMOD_AD_PELCO_CMD_LEFT,
+    HALMOD_AD_PELCO_CMD_RIGHT,
+    HALMOD_AD_PELCO_CMD_OSD         = 6,
+    HALMOD_AD_PELCO_CMD_IRIS_OPEN,
+    HALMOD_AD_PELCO_CMD_IRIS_CLOSE,
+    HALMOD_AD_PELCO_CMD_FOCUS_NEAR,
+    HALMOD_AD_PELCO_CMD_FOCUS_FAR,
+    HALMOD_AD_PELCO_CMD_ZOOM_WIDE,
+    HALMOD_AD_PELCO_CMD_ZOOM_TELE   = 12,
+    HALMOD_AD_PELCO_CMD_SCAN_SR,
+    HALMOD_AD_PELCO_CMD_SCAN_ST,
+    HALMOD_AD_PELCO_CMD_PRESET1,
+    HALMOD_AD_PELCO_CMD_PRESET2,
+    HALMOD_AD_PELCO_CMD_PRESET3,
+    HALMOD_AD_PELCO_CMD_PTN1_SR,
+    HALMOD_AD_PELCO_CMD_PTN1_ST,
+    HALMOD_AD_PELCO_CMD_PTN2_SR,
+    HALMOD_AD_PELCO_CMD_PTN2_ST,
+    HALMOD_AD_PELCO_CMD_PTN3_SR,
+    HALMOD_AD_PELCO_CMD_PTN3_ST,
+    HALMOD_AD_PELCO_CMD_RUN         = 24,
+    HALMOD_AD_PELCO_CMD_BUTT
+} HALMOD_AD_PELCO_CMD_E;
+
+typedef enum
+{
+    HALMOD_VI_CLOCK_MODE_NONE = 0,
+    HALMOD_VI_CLOCK_MODE_SINGLE,
+    HALMOD_VI_CLOCK_MODE_DOUBLE,
+    HALMOD_VI_CLOCK_MODE_DOUBLE_X,
+} HALMOD_VI_CLOCK_MODE_E;
+
+typedef enum
+{
+    HALMOD_AD_CVBS_MODE_STD = 0,    /* 标准模式  */
+    HALMOD_AD_CVBS_MODE_EMC1,       /* 兼容模式一 */
+    HALMOD_AD_CVBS_MODE_EMC2,
+    HALMOD_AD_CVBS_MODE_EMC3,
+    HALMOD_AD_CVBS_MODE_EMC4,
+    HALMOD_AD_CVBS_MODE_EMC5,
+    HALMOD_AD_CVBS_MODE_EMC6,
+    HALMOD_AD_CVBS_MODE_NULL,
+} HALMOD_AD_CVBS_MODE_E;
+
+typedef enum
+{
+    HALMOD_AD_DET_MODE_AUTO = 0,    /* AUTO模式 */
+    HALMOD_AD_DET_MODE_AHD,         /* AHD模式 */
+    HALMOD_AD_DET_MODE_CVI,         /* TVI模式 */
+    HALMOD_AD_DET_MODE_TVI,         /* CVI模式 */
+    HALMOD_AD_DET_MODE_OTHER,
+    HALMOD_AD_DET_MODE_BUTT
+} HALMOD_AD_DET_MODE_E;
+
+typedef enum
+{
+    HALMOD_AD_SCENE_STANDARD = 0,   /* 标准 */
+    HALMOD_AD_SCENE_INDOOR,         /* 室内 */
+    HALMOD_AD_SCENE_OUTDOOR,        /* 室外 */
+    HALMOD_AD_SCENE_WEAK_LIGHT,     /* 弱光 */
+    HALMOD_AD_SCENE_BUTT
+} HALMOD_AD_VIDEO_SCENE_E;
+
+typedef enum
+{
+    HALMOD_AD_CHIP_NAME_CX26828 = 0,
+    HALMOD_AD_CHIP_NAME_CX26848,
+    HALMOD_AD_CHIP_NAME_BUTT
+} HALMOD_AD_CHIP_NAME_E;
+
+typedef enum
+{
+    HALMOD_COM485_EN_STAT_LOW = 0,  /* 低电平 */
+    HALMOD_COM485_EN_STAT_HIGH,     /* 高电平 */
+    HALMOD_COM485_EN_STAT_BUTT
+} HALMOD_COM485_EN_STAT_E;
+
+typedef enum
+{
+    HALMOD_COM485_EN0 = 0,
+    HALMOD_COM485_EN1,
+    HALMOD_COM485_EN2,
+    HALMOD_COM485_EN3,
+    HALMOD_COM485_BUTT
+} HALMOD_COM485_EN_E;
+
+typedef enum
+{
+    HALMOD_DEVTYPE_FUNC_INVALID = 0,
+    HALMOD_DEVTYPE_SUPPORT_PCIV,
+    HALMOD_DEVTYPE_SUPPORT_VBI,
+    HALMOD_DEVTYPE_SUPPORT_AHD,
+    HALMOD_DEVTYPE_FUNC_BUTT = ~0
+} HALMOD_DEVTYPE_FUNC_E;
+
+typedef enum
+{
+    HALMOD_START_TAG_STAT_NORMAL = 0,
+    HALMOD_START_TAG_STAT_ERROR, 
+    HALMOD_START_TAG_STAT_BUTT
+} HALMOD_START_TAG_STAT_E;
+
+typedef enum
+{
+    HALMOD_REBOOT_TAG_STAT_SHUTDOWN = 0,    /* 冷重启标记 */
+    HALMOD_REBOOT_TAG_STAT_NORMAL,          /* 热重启标记 */
+    HALMOD_REBOOT_TAG_STAT_BUTT
+} HALMOD_REBOOT_TAG_STAT_E;
+
+/* 硬件版本定义 */
+typedef struct
+{
+    UINT32 minver : 6;  /* 0~63 */
+    UINT32 secver : 6;  /* 0~63 */
+    UINT32 majver : 5;  /* 0~31 */
+    UINT32 day : 5;     /* 日: 1~31 */
+    UINT32 month : 4;   /* 月: 1~12 */
+    UINT32 year : 6;    /* 年: 0~63 */
+} HWVERSION, *PHWVERSION;
+#define HWVERSION_LEN   sizeof(HWVERSION)
+
+typedef struct
+{
+    UINT8 Type;     /* (HALMOD_LED_TYPE_E) */
+    UINT8 Chn;
+    UINT8 Stat;
+    UINT8 Resvd;    /* 保留位 */
+    UINT32 TimerMS;
+} HALMOD_BEEP_S, *PHALMOD_BEEP_S;
+#define HALMOD_BEEP_S_LEN   sizeof(HALMOD_BEEP_S)
+
+typedef struct
+{
+    UINT8 Chn;      /* 通道号 */
+    UINT8 Val;      /* 设置值 */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_VIDEO_CTRL_S, *PHALMOD_VIDEO_CTRL_S;
+#define HALMOD_VIDEO_CTRL_S_LEN sizeof(HALMOD_VIDEO_CTRL_S)
+
+typedef struct
+{
+    UINT32 DevAddr; /* AD设备地址 */
+    ULNG32 RegAddr; /* AD设备寄存器地址 */
+    ULNG32 RegVal;  /* AD设备寄存器值 */
+} HALMOD_VIDEO_REG_CTRL_S, *PHALMOD_VIDEO_REG_CTRL_S;
+#define HALMOD_VIDEO_REG_CTRL_S_LEN sizeof(HALMOD_VIDEO_REG_CTRL_S)
+
+typedef struct
+{
+    UINT8 Chn;          /* 通道号 */
+    UINT8 Stat;         /* EQ是否开启(MV_BOOL) */
+    UINT8 CableType;    /* 线类型(HALMOD_EQ_CABLE_TYPE_E) */
+    UINT8 CableLen;     /* 线长度(HALMOD_EQ_CABLE_LEN_E) */
+} HALMOD_VIDEO_EQ_S, *PHALMOD_VIDEO_EQ_S;
+#define HALMOD_VIDEO_EQ_S_LEN   sizeof(HALMOD_VIDEO_EQ_S)
+
+typedef struct
+{
+    ULNG32 VSExist; /* bit 0~bit 63依次保存ch0~ch63是否接有视频信息,1-有视频,0-无视频 */
+    ULNG32 VSValid; /* bit 0~bit 63依次保存ch0~ch63通道视频制式是否匹配信息,1-匹配,0-不匹配或无视频 */
+} HALMOD_VIDEO_STATUS_S, *PHALMOD_VIDEO_STATUS_S;
+#define HALMOD_VIDEO_STATUS_S_LEN   sizeof(HALMOD_VIDEO_STATUS_S)
+
+typedef struct
+{
+    UINT8 Chn;      /* 通道号 */
+    UINT8 Resvd[3]; /* 保留位 */
+    UINT16 OftX;    /* 水平偏移点数 */
+    UINT16 OftY;    /* 垂直偏移行数 */
+} HALMOD_GAP_CTRL_S, *PHALMOD_GAP_CTRL_S;
+#define HALMOD_GAP_CTRL_S_LEN   sizeof(HALMOD_GAP_CTRL_S)
+
+typedef struct
+{
+    UINT8 Ctrl;     /* (HALMOD_SWITCH_E) */
+    UINT8 Chn;      /* 通道号(保留) */
+    UINT8 Val;      /* 增益值(0-255,Ctrl=1时有效) */
+    UINT8 Resvd;    /* 保留位 */
+} HALMOD_AGC_CTRL_S, *PHALMOD_AGC_CTRL_S;
+#define HALMOD_AGC_CTRL_S_LEN   sizeof(HALMOD_AGC_CTRL_S)
+
+typedef struct
+{
+    UINT8 Chn;      /* 通道号 */
+    UINT8 DetMode;  /* (HALMOD_AD_DET_MODE_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_AD_DET_MODE_S, *PHALMOD_AD_DET_MODE_S;
+#define HALMOD_AD_DET_MODE_S_LEN    sizeof(HALMOD_AD_DET_MODE_S)
+
+typedef struct
+{
+    UINT8 Chn;      /* 通道号 */
+    UINT8 VMode;    /* (HALMOD_VIDEO_FORMAT_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_VIDEO_FORMAT_S, *PHALMOD_VIDEO_FORMAT_S;
+#define HALMOD_VIDEO_FORMAT_S_LEN   sizeof(HALMOD_VIDEO_FORMAT_S)
+
+typedef struct
+{
+    UINT8 ViDev;    /* VI设备号 */
+    UINT8 ClkMode;  /* (HALMOD_VI_CLOCK_MODE_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_VI_CLOCK_MODE_S, *PHALMOD_VI_CLOCK_MODE_S;
+#define HALMOD_VI_CLOCK_MODE_S_LEN  sizeof(HALMOD_VI_CLOCK_MODE_S)
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 CMode;    /* (HALMOD_AD_CVBS_MODE_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_AD_CVBS_MODE_S, *PHALMOD_AD_CVBS_MODE_S;
+#define HALMOD_AD_CVBS_MODE_S_LEN   sizeof(HALMOD_AD_CVBS_MODE_S)
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 Cmd;      /* (HALMOD_AD_PELCO_CMD_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_AD_PELCO_CMD_S, *PHALMOD_AD_PELCO_CMD_S;
+#define HALMOD_AD_PELCO_CMD_S_LEN   sizeof(HALMOD_AD_PELCO_CMD_S)
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 Res;      /* (HALMOD_VIDEO_RES_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_VIDEO_RES_S, *PHALMOD_VIDEO_RES_S;
+#define HALMOD_VIDEO_RES_S_LEN  sizeof(HALMOD_VIDEO_RES_S)
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 ChipName; /* (HALMOD_AD_CHIP_NAME_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_AD_CHIP_NAME_S, *PHALMOD_AD_CHIP_NAME_S;
+#define HALMOD_AD_CHIP_NAME_S_LEN   sizeof(HALMOD_AD_CHIP_NAME_S)
+
+typedef struct
+{
+    UINT8 Brightness;
+    UINT8 Contrast;
+    UINT8 Saturation;
+    UINT8 Hue;
+    UINT8 Scene;    /* 视频场景(HALMOD_AD_VIDEO_SCENE_E) */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_VIDEO_SCENE_S, *PHALMOD_VIDEO_SCENE_S;
+#define HALMOD_VIDEO_SCENE_S_LEN    sizeof(HALMOD_VIDEO_SCENE_S)
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 Ctrl;     /* (MV_BOOL) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_VIDEO_REALTIME_CTRL_S, *PHALMOD_VIDEO_REALTIME_CTRL_S;
+#define HALMOD_VIDEO_REALTIME_CTRL_S_LEN    sizeof(HALMOD_VIDEO_REALTIME_CTRL_S)
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 EnCom485[3];
+} HALMOD_COM_S, *PHALMOD_COM_S;
+#define HALMOD_COM_S_LEN    sizeof(HALMOD_COM_S)
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 Stat;
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_SHAKE_S, *PHALMOD_SHAKE_S;
+#define HALMOD_SHAKE_S_LEN  sizeof(HALMOD_SHAKE_S)
+
+typedef struct
+{
+    UINT8 Chn;                  /* 暂不使用的参数 */
+    UINT8 Mac[MAX_MAC_STR_LEN]; /* 要查询的MAC地址 */
+    UINT8 Port;                 /* 根据MAC地址获取到的相应PORT口 */
+} HALMOD_NETSWITCH_GET_PORT_S, *PHALMOD_NETSWITCH_GET_PORT_S;
+#define HALMOD_NETSWITCH_GET_PORT_S_LEN sizeof(HALMOD_NETSWITCH_GET_PORT_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_NETSWITCH_GET_PORT_S, 8);
+
+typedef struct
+{
+    UINT8 Num;                  /* 暂不使用的参数 */
+    UINT8 PowerCtrlStat;        /* 获取电源可控状态,为1时可控,为0时不可控制 */
+    UINT8 Resvd[2];             /* 保留位 */
+    UINT8 PortLinkStat[32];     /* 获取到的对应port口连接状态,哪个port就对应哪个数组下标,一次全部获取 */
+    UINT8 PortPowerChgStat[32]; /* 暂不使用的参数 */
+} HALMOD_NETSWITCH_GET_PORT_STATE_S, *PHALMOD_NETSWITCH_GET_PORT_STATE_S;
+#define HALMOD_NETSWITCH_GET_PORT_STATE_S_LEN   sizeof(HALMOD_NETSWITCH_GET_PORT_STATE_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_NETSWITCH_GET_PORT_STATE_S, 68);
+
+typedef struct
+{
+    UINT8 Chn;              /* 暂不使用的参数 */
+    UINT8 Resvd[3];         /* 保留位 */
+    SINT32 PortPower[32];   /* 获取到的port口功率mA*V,哪个port就对应哪个数组下标,一次全部获取 */
+    SINT32 TolPower;        /* 获取到的所有port口总功率mA*V */
+    SINT32 TolPowerMax;     /* 暂不使用的参数 */
+} HALMOD_NETSWITCH_GET_POWER_S, *PHALMOD_NETSWITCH_GET_POWER_S;
+#define HALMOD_NETSWITCH_GET_POWER_S_LEN    sizeof(HALMOD_NETSWITCH_GET_POWER_S)
+
+typedef struct
+{
+    SINT8 WhichPort;    /* 控制哪个port口,8路0~7,如果是-1则控制所有通道 */
+    UINT8 Stat;	        /* 使能供电,1-供电,0-不供电*/
+    UINT8 Resvd[2];     /* 保留位 */
+    UINT32 TolPowerMax; /* 暂不使用的参数 */
+} HALMOD_NETSWITCH_SET_POWER_S, *PHALMOD_NETSWITCH_SET_POWER_S;
+#define HALMOD_NETSWITCH_SET_POWER_S_LEN    sizeof(HALMOD_NETSWITCH_SET_POWER_S)
+
+typedef struct
+{
+    SINT8 WhichPort;            /* 获取哪个port口,8路0~7,如果是-1则获取所有通道 */
+    UINT8 Resvd[3];             /* 保留位 */
+    UINT32 PortDetClass[32];    /* 获取到的对应级别的功率mA*V,哪个port就对应哪个数组下标 */
+} HALMOD_NETSWITCH_GET_PORT_DET_CLASS_S, *PHALMOD_NETSWITCH_GET_PORT_DET_CLASS_S;
+#define HALMOD_NETSWITCH_GET_PORT_DET_CLASS_S_LEN   sizeof(HALMOD_NETSWITCH_GET_PORT_DET_CLASS_S)
+
+typedef struct
+{
+    SINT8 WhichPort;    /* 控制哪个port口,8路0~7,如果是-1则控制所有通道 */
+    UINT8 Stat;		    /* 使能探测分级,1-使能,0-不使能 */
+    UINT8 Resvd[2];     /* 保留位 */
+} HALMOD_NETSWITCH_SET_PORT_DET_CLASS_S, *PHALMOD_NETSWITCH_SET_PORT_DET_CLASS_S;
+#define HALMOD_NETSWITCH_SET_PORT_DET_CLASS_S_LEN   sizeof(HALMOD_NETSWITCH_SET_PORT_DET_CLASS_S)
+
+typedef struct
+{
+    UINT8 Type;     /* 复位模式:0-软复位;1-硬复位 */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_NETSWITCH_RESET_PARAM_S, *PHALMOD_NETSWITCH_RESET_PARAM_S;
+#define HALMOD_NETSWITCH_RESET_PARAM_S_LEN  sizeof(HALMOD_NETSWITCH_RESET_PARAM_S)
+
+typedef struct
+{
+    UINT8 VoDev;    /* (VO_DEV_E) */
+    UINT8 IntfSync; /* (HALMOD_VO_INTFSYNC_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_VO_ATTR_S, *PHALMOD_VO_ATTR_S;
+#define HALMOD_VO_ATTR_S_LEN  sizeof(HALMOD_VO_ATTR_S)
+
+/********************************* NEW ***************************************/
+#define HALMOD_MAX_MAC_NUMS     2
+
+#define HALMOD_BUZZER_TIME_MIN      300 /* 单位为毫秒 */
+#define HALMOD_TIMER_INTERVAL_TIME  100 /* 单位为毫秒 */
+#define HALMOD_AUDIO_IN_TIME_MIN    500 /* 单位为毫秒 */
+#if 0
+typedef struct
+{
+    UINT8 MarketType;   /* 市场类型(MAUTH_MARKET_TYPE_E) */
+    UINT8 Channel;      /* 设备路数(MAUTH_CHANNEL_E) */
+    UINT8 MacBitTab;    /* MAC地址MacAddr是否有效(按位表示,0-表示无效,1-表示有效) */
+    UINT8 Resvd;        /* 保留位 */
+    char OemType[MAX_UPGRADE_OEM_TYPE_LEN]; /* OME类型(UPGRADE_IGNORE_STR-表示忽落此项检查) */
+    UINT8 MacAddr[HALMOD_MAX_MAC_NUMS][MAX_MAC_STR_LEN];/* MAC地址列表 */
+} HALMOD_MAUTH_DEV_ATTR_S, *PHALMOD_MAUTH_DEV_ATTR_S;
+#define HALMOD_MAUTH_DEV_ATTR_S_LEN   sizeof(HALMOD_MAUTH_DEV_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_MAUTH_DEV_ATTR_S, 80);
+
+typedef struct
+{
+    UINT8 HwSnFlag; /* 硬件序列号标志,字母M(MAUTH_HARDWARE_SN_FLAG) */
+    UINT8 ProdYear; /* 硬件生产年份(两位,从2000年开始) */
+    UINT8 BatchNum; /* 硬件生产批号(两位) */
+    UINT8 SnRsvd;   /* 产品序列号规范中要求的保留位(两位,默认为0) */
+    UINT16 Series;  /* 硬件系列号(四位) */
+    UINT16 FlRsvd;  /* 补齐保留位 */
+    UINT64 PartCode;/* Part编码(八位) */
+    char HwSnStr[MAX_MAUTH_HARDWARE_SN_STR_LEN]; /* 硬件序列号 */
+} HALMOD_MAUTH_HARDWARE_SN_S, *PHALMOD_MAUTH_HARDWARE_SN_S;
+#define HALMOD_MAUTH_HARDWARE_SN_S_LEN  sizeof(HALMOD_MAUTH_HARDWARE_SN_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_MAUTH_HARDWARE_SN_S, 48);
+#endif
+#define HALMOD_CHIP_ID_DEV_LEN  16
+
+typedef struct
+{
+    char ChipId[HALMOD_CHIP_ID_DEV_LEN + 1];
+} HALMOD_DEVINFO_ATTR_S, *PHALMOD_DEVINFO_ATTR_S;
+#define HALMOD_DEVINFO_ATTR_S_LEN  sizeof(HALMOD_DEVINFO_ATTR_S)
+
+#if 0
+typedef struct
+{
+    MAUTH_DEV_ATTR_S DevAttr;
+    MAUTH_UUID_CONF_S UuidConf;
+    MAUTH_HARDWARE_SN_S HardwareSn;
+} HALMOD_DEVINFO_CONF_S, *PHALMOD_DEVINFO_CONF_S;
+#define HALMOD_DEVINFO_CONF_S_LEN   sizeof(HALMOD_DEVINFO_CONF_S)
+#endif
+
+typedef struct
+{
+    SYSTIME SysTm;
+    UINT8 WDay;     /* 星期[日~六]: 0~6 */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_RTC_ATTR_S, *PHALMOD_RTC_ATTR_S;
+#define HALMOD_RTC_ATTR_S_LEN   sizeof(HALMOD_RTC_ATTR_S)
+
+typedef enum
+{
+    HALMOD_BUZZER_TYPE_GPIO, 
+    HALMOD_BUZZER_TYPE_BUTT
+} HALMOD_BUZZER_TYPE_E;
+
+typedef enum
+{
+    HALMOD_BUZZER_ACTION_OFF, 
+    HALMOD_BUZZER_ACTION_ON, 
+    HALMOD_BUZZER_ACTION_ONCE, 
+    HALMOD_BUZZER_ACTION_BUTT
+} HALMOD_BUZZER_ACTION_E;
+
+typedef struct
+{
+    UINT8 Type;         /* (HALMOD_BUZZER_TYPE_E) */
+    UINT8 Chn;
+    UINT8 Action;       /* (HALMOD_BUZZER_ACTION_E) */
+    UINT8 Resvd[3];     /* 保留位 */
+    UINT16 TimeOutMS;   /* 单位毫秒,精度为HALMOD_TIMER_INTERVAL_TIME */
+} HALMOD_BUZZER_ATTR_S, *PHALMOD_BUZZER_ATTR_S;
+#define HALMOD_BUZZER_ATTR_S_LEN sizeof(HALMOD_BUZZER_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_BUZZER_ATTR_S, 8);
+
+typedef enum
+{
+    LIGHT_TYPE_IR = 0,  /* 红外补光灯 */
+    LIGHT_TYPE_WHITE,   /* 白光补光灯 */
+    LIGHT_TYPE_BACK,    /* 屏幕背光 */
+    LIGHT_TYPE_TRIC,    /* 三色灯 */
+    LIGHT_TYPE_NET,		/* 网络指示灯 */
+    LIGHT_TYPE_POWER, 	/* 电源指示灯 */
+    LIGHT_TYPE_DISK,	/* 硬盘指示灯 */
+    LIGHT_TYPE_SYS,		/* 系统指示灯 */
+    LIGHT_TYPE_DECO,	/* 外观装饰灯 */
+    LIGHT_TYPE_FLASH,   /* 报警闪烁灯 */
+    LIGHT_TYPE_BUTT
+} LIGHT_TYPE_E;
+
+typedef enum
+{
+    LIGHT_TRIC_RED = 0, /* 三色灯红色部分 */
+    LIGHT_TRIC_GREEN,   /* 三色灯绿色部分 */
+    LIGHT_TRIC_BLUE,    /* 三色灯蓝色部分 */
+    LIGHT_TRIC_BUTT
+} LIGHT_TRIC_E;
+
+typedef enum
+{
+    HALMOD_LIGHT_ACTION_OFF,    /* 关 */
+    HALMOD_LIGHT_ACTION_ON,     /* 开 */
+    HALMOD_LIGHT_ACTION_BREATH, /* 呼吸 */
+    HALMOD_LIGHT_ACTION_BUTT
+} HALMOD_LIGHT_ACTION_E;
+
+typedef struct
+{
+    UINT8 Type;     /* (LIGHT_TYPE_E) */
+    UINT8 Chn;
+    UINT8 Action;   /* (HALMOD_LIGHT_ACTION_E) */
+    UINT8 Data;     /* 表示亮度时取值范围为0~100, 表示色深时取值范围0~255. */
+    UINT16 FrqKHZ;  /* Integer From 1 */
+    UINT16 FrqHZ;   /* 为了兼容需要更低频率的控制需求，实际生效频率为FrqKHZ*1000 + FrqHZ */
+} HALMOD_LIGHT_ATTR_S, *PHALMOD_LIGHT_ATTR_S;
+#define HALMOD_LIGHT_ATTR_S_LEN sizeof(HALMOD_LIGHT_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_LIGHT_ATTR_S, 8);
+
+typedef struct
+{
+    HALMOD_LIGHT_ATTR_S Attr[LIGHT_TRIC_BUTT];
+} LIGHT_TRIC_ATTR_S, *PLIGHT_TRIC_ATTR_S;
+#define LIGHT_TRIC_ATTR_S_LEN  sizeof(LIGHT_TRIC_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(LIGHT_TRIC_ATTR_S, HALMOD_LIGHT_ATTR_S_LEN * LIGHT_TRIC_BUTT);
+
+typedef struct
+{
+    UINT8 Enable;
+    UINT8 Mode;			/* 0 单次采集模式，1 循环采集模式*/
+    UINT8 CircleTime;   /* 循环采集模式采集间隔：CircleTime * 2 ms */
+    UINT8 Resvd[5];
+} HALMOD_TSENSOR_ATTR_S, *PHALMOD_TSENSOR_ATTR_S;
+#define HALMOD_TSENSOR_ATTR_S_LEN sizeof(HALMOD_TSENSOR_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_TSENSOR_ATTR_S, 8);
+
+typedef enum
+{
+    HALMOD_WIEGAND_BIT_TYPE_26 = 0, 
+    HALMOD_WIEGAND_BIT_TYPE_34, 
+    HALMOD_WIEGAND_BIT_TYPE_36, 
+    HALMOD_WIEGAND_BIT_TYPE_BUTT
+} HALMOD_WIEGAND_BIT_TYPE_E;
+
+typedef enum
+{
+    HALMOD_WIEGAND_DIR_TYPE_SEND = 0, 
+    HALMOD_WIEGAND_DIR_TYPE_RECV,
+    HALMOD_WIEGAND_DIR_TYPE_BUTT
+} HALMOD_WIEGAND_DIR_TYPE_E;
+
+typedef struct
+{
+    UINT8 Chn;
+    UINT8 Dir;    /* (HALMOD_WIEGAND_DIR_TYPE_E) */
+    UINT8 Bit;    /* (HALMOD_WIEGAND_BIT_TYPE_E) */
+    UINT8 Resvd;  /* 保留位 */
+} HALMOD_WIEGAND_ATTR_S, *PHALMOD_WIEGAND_ATTR_S;
+#define HALMOD_WIEGAND_ATTR_S_LEN   sizeof(HALMOD_WIEGAND_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_WIEGAND_ATTR_S, 4);
+
+typedef struct
+{
+    UINT8 Bit;      /* (HALMOD_WIEGAND_BIT_TYPE_E) */
+    UINT8 Resvd[7]; /* 保留位 */
+    UINT64 Data;
+} HALMOD_WIEGAND_DATA_S, *PHALMOD_WIEGAND_DATA_S;
+#define HALMOD_WIEGAND_DATA_S_LEN   sizeof(HALMOD_WIEGAND_DATA_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_WIEGAND_DATA_S, 16);
+
+typedef struct
+{
+    UINT8 Type;     /* (HALMOD_POWER_TYPE_E) */
+    UINT8 Chn;
+    UINT8 Stat;     /* (HALMOD_POWER_STAT_E) */
+    UINT8 Resvd;    /* 保留位 */
+} HALMOD_POWER_ATTR_S, *PHALMOD_POWER_ATTR_S;
+#define HALMOD_POWER_ATTR_S_LEN sizeof(HALMOD_POWER_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_POWER_ATTR_S, 4);
+
+#define HALMOD_POWER_RESET_TIME_DELAY_DEF   100 /* 单位为毫秒 */
+typedef struct
+{
+    UINT8 Type;     /* (HALMOD_POWER_TYPE_E) */
+    UINT8 Chn;
+    UINT16 Delay;   /* 单位毫秒(为0时使用默认值HALMOD_POWER_RESET_TIME_DELAY_DEF) */
+} HALMOD_POWER_RESET_S, *PHALMOD_POWER_RESET_S;
+#define HALMOD_POWER_RESET_S_LEN    sizeof(HALMOD_POWER_RESET_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_POWER_RESET_S, 4);
+
+typedef enum
+{
+    HALMOD_ALARM_TYPE_IN = 0, 
+    HALMOD_ALARM_TYPE_OUT
+} HALMOD_ALARM_TYPE_E;
+
+typedef enum
+{
+    HALMOD_ALARM_STAT_LOW = 0, 
+    HALMOD_ALARM_STAT_HIGH
+} HALMOD_ALARM_STAT_E;
+
+typedef struct
+{
+    UINT8 Type;     /* 类型(HALMOD_ALARM_TYPE_E) */
+    UINT8 Chn;      /* 通道 */
+    UINT8 Stat;     /* 状态(HALMOD_ALARM_STAT_E) */
+    UINT8 InType;   /* 常开常闭(HALMOD_ALARM_INTYPE_E) */
+} HALMOD_ALARM_ATTR_S, *PHALMOD_ALARM_ATTR_S;
+#define HALMOD_ALARM_ATTR_S_LEN sizeof(HALMOD_ALARM_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_ALARM_ATTR_S, 4);
+
+typedef enum
+{
+    HALMOD_TAMPER_STAT_LOW = 0, 
+    HALMOD_TAMPER_STAT_HIGH
+} HALMOD_TAMPER_STAT_E;
+
+typedef struct
+{
+    UINT8 Stat;     /* 状态(HALMOD_TAMPER_STAT_E) */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_TAMPER_ATTR_S, *PHALMOD_TAMPER_ATTR_S;
+#define HALMOD_TAMPER_ATTR_S_LEN    sizeof(HALMOD_TAMPER_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_TAMPER_ATTR_S, 4);
+
+typedef enum
+{
+    HALMOD_DEF_KEY_STAT_LOW = 0, 
+    HALMOD_DEF_KEY_STAT_HIGH
+} HALMOD_DEF_KEY_STAT_E;
+
+typedef struct
+{
+    UINT8 Stat;     /* 状态(HALMOD_DEF_KEY_STAT_E) */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_DEF_KEY_ATTR_S, *PHALMOD_DEF_KEY_ATTR_S;
+#define HALMOD_DEF_KEY_ATTR_S_LEN   sizeof(HALMOD_DEF_KEY_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_DEF_KEY_ATTR_S, 4);
+
+typedef struct
+{
+    UINT32 Stat;	/* 当Type为GPIO时，取值0、1，当Type为ADC时，取值0~33，单位0.1V */
+    UINT8 Type;     /* 0 表示类型为 GPIO，1 表示类似为 ADC */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_KEYCALL_ATTR_S, *PHALMOD_KEYCALL_ATTR_S;
+#define HALMOD_KEYCALL_ATTR_S_LEN   sizeof(HALMOD_KEYCALL_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_KEYCALL_ATTR_S, 8);
+
+typedef enum
+{
+    HALMOD_CHAGER_KEY_STAT_LOW = 0, 
+    HALMOD_CHAGER_KEY_STAT_HIGH
+} HALMOD_CHAGER_KEY_STAT_E;
+
+typedef struct
+{
+    UINT8 Stat;     /* 状态(HALMOD_CHAGER_KEY_STAT_E) */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_CHARGE_ATTR_S, *PHALMOD_CHARGE_ATTR_S;
+#define HALMOD_CHARGE_ATTR_S_LEN   sizeof(HALMOD_CHARGE_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_CHARGE_ATTR_S, 4);
+
+typedef enum
+{
+    HALMOD_DOOR_BTN_STAT_LOW = 0, 
+    HALMOD_DOOR_BTN_STAT_HIGH
+} HALMOD_DOOR_BTN_STAT_E;
+
+typedef struct
+{
+    UINT8 Stat;     /* 状态(HALMOD_DOOR_BTN_STAT_E) */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_DOOR_BTN_ATTR_S, *PHALMOD_DOOR_BTN_ATTR_S;
+#define HALMOD_DOOR_BTN_ATTR_S_LEN  sizeof(HALMOD_DOOR_BTN_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_DOOR_BTN_ATTR_S, 4);
+
+typedef enum
+{
+    HALMOD_DOOR_MEG_STAT_LOW = 0, 
+    HALMOD_DOOR_MEG_STAT_HIGH
+} HALMOD_DOOR_MEG_STAT_E;
+
+typedef struct
+{
+    UINT8 Stat;     /* 状态(HALMOD_DOOR_MEG_STAT_E) */
+    UINT8 Resvd[3]; /* 保留位 */
+} HALMOD_DOOR_MEG_ATTR_S, *PHALMOD_DOOR_MEG_ATTR_S;
+#define HALMOD_DOOR_MEG_ATTR_S_LEN  sizeof(HALMOD_DOOR_MEG_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_DOOR_MEG_ATTR_S, 4);
+
+typedef enum
+{
+    HALMOD_DOOR_RELAY_STAT_LOW = 0, 
+    HALMOD_DOOR_RELAY_STAT_HIGH
+} HALMOD_DOOR_RELAY_STAT_E;
+
+typedef struct
+{
+    UINT8 Chn;      /* 通道 */
+    UINT8 Stat;     /* 状态(HALMOD_DOOR_RELAY_STAT_E) */
+    UINT8 Resvd[2]; /* 保留位 */
+} HALMOD_DOOR_RELAY_ATTR_S, *PHALMOD_DOOR_RELAY_ATTR_S;
+#define HALMOD_DOOR_RELAY_ATTR_S_LEN    sizeof(HALMOD_DOOR_RELAY_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_DOOR_RELAY_ATTR_S, 4);
+
+#define HALMOD_SLAVE_CHIPS_RESET_TIME_DELAY_DEF 100     /* 单位为毫秒 */
+#define HALMOD_SLAVE_CHIPS_INTER_TIME_DELAY_DEF 1000    /* 单位为毫秒 */
+
+typedef struct
+{
+    UINT16 ResetDelay;  /* 单位毫秒(为0时使用默认值HALMOD_SLAVE_CHIPS_RESET_TIME_DELAY_DEF) */
+    UINT16 InterDelay;  /* 单位毫秒(为0时使用默认值HALMOD_SLAVE_CHIPS_INTER_TIME_DELAY_DEF) */
+} HALMOD_SLAVE_CHIPS_RESET_ATTR_S, *PHALMOD_SLAVE_CHIPS_RESET_ATTR_S;
+#define HALMOD_SLAVE_CHIPS_RESET_ATTR_S_LEN sizeof(HALMOD_SLAVE_CHIPS_RESET_ATTR_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_SLAVE_CHIPS_RESET_ATTR_S, 4);
+
+#define MAX_HALMOD_AICIPHER_SN_LEN      36
+#define HALMOD_AICIPHER_SN_MIAN_LEN     32
+#define HALMOD_AICIPHER_SN_OTHER_LEN    35
+
+typedef enum
+{
+    HALMOD_AICIPHER_SN_TYPE_MIAN = 0, 
+    HALMOD_AICIPHER_SN_TYPE_OTHER, 
+    HALMOD_AICIPHER_SN_TYPE_BUTT
+} HALMOD_AICIPHER_SN_TYPE_E;
+
+typedef struct
+{
+    UINT8 Sn[HALMOD_AICIPHER_SN_TYPE_BUTT][MAX_HALMOD_AICIPHER_SN_LEN];
+} HALMOD_AICIPHER_ATTR_S, *PHALMOD_AICIPHER_ATTR_S;
+#define HALMOD_AICIPHER_ATTR_S_ELN  sizeof(HALMOD_AICIPHER_ATTR_S)
+
+typedef void (*HalMod_AudioIn_Stat_Callback)(UINT32 Stat);
+typedef struct
+{
+    SINT32 CurStat;
+    HalMod_AudioIn_Stat_Callback AudioIn_Callback;
+} HALMOD_AUDIO_ATTR_S, *PHALMOD_AUDIO_ATTR_S;
+#define HALMOD_AUDIO_ATTR_S_ELN  sizeof(HALMOD_AUDIO_ATTR_S)
+
+typedef struct
+{
+    UINT16 FstDir;     /* 一级目录(不算根目录) */
+    UINT16 SecDir;     /* 二级目录 */
+    UINT16 DataFile;   /* 卡号文件 */
+    UINT16 DataOffset;    /* 数据在文件内的偏移 */
+    UINT8 DataLen;       /* 数据长度(B) */
+    UINT8 KeyFlag;        /* 密钥标识 */
+    UINT8 KeyLen;          /* 密钥长度，8B/16B */
+    UINT8 Resv[5];
+    UINT8 Key[16];         /* 密钥 */
+} HALMOD_NFC_CPU_CFG_S, *PHALMOD_NFC_CPU_CFG_S;
+#define HALMOD_NFC_CPU_CFG_S_LEN sizeof(HALMOD_NFC_CPU_CFG_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_NFC_CPU_CFG_S, 32);
+
+
+typedef enum
+{
+    HALMOD_NFC_M1_AUTHMODE_A = 0,     /* 使用密钥A鉴权 */
+    HALMOD_NFC_M1_AUTHMODE_B
+} HALMOD_NFC_M1_AUTHMODE_E;
+
+typedef struct
+{
+    UINT8 AuthMode;   /* HALMOD_NFC_M1_AUTHMODE_E, 鉴权模式，0:A密钥, 其他:B密钥 */
+    UINT8 Sector;
+    UINT8 Block;
+    UINT8 Key[6];
+    UINT8 Resv[7];
+} HALMOD_NFC_M1_CFG_S, *PHALMOD_NFC_M1_CFG_S;
+#define HALMOD_NFC_M1_CFG_S_LEN sizeof(HALMOD_NFC_M1_CFG_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HALMOD_NFC_M1_CFG_S, 16);
+
+
+typedef enum
+{
+    HALMOD_NFC_CARD_TYPE_AB = 0,        /* 通用TypeA/TypeB类型刷卡 */
+    HALMOD_NFC_CARD_TYPE_FM_SM,         /* 复旦微国密卡刷卡 */
+    HALMOD_NFC_CARD_TYPE_MEG_SM,        /* 旷视国密卡刷卡(中控瑞迪优定制) */
+    HALMOD_NFC_CARD_TYPE_MEG_CPU,       /* 旷视普通CPU卡刷卡 */
+    HALMOD_NFC_CARD_TYPE_M1,            /* M1类卡读块内容 */
+#ifdef MODEL_BZRZ_ENABLE
+    HALMOD_NFC_CARD_TYPE_CHIANMOBILE_SIM,   /* 中移动超级SIM卡 */
+#endif /* MODEL_BZRZ_ENABLE */
+    HALMOD_NFC_CARD_TYPE_END
+} HALMOD_NFC_CARD_TYPE_E;
+
+typedef struct
+{
+    UINT8 CardType;    /* HALMOD_NFC_CARD_TYPE_E, 卡片类型 */
+    UINT8 Resv1[7];
+    HALMOD_NFC_CPU_CFG_S CPUCfg;        /* CPU卡配置 */
+    HALMOD_NFC_M1_CFG_S M1Cfg;          /* M1卡配置 */
+
+    SINT16 TimeOut;    /* 超时时间(-1: 阻塞式; 0: 非阻塞; >0: 超时时间(单位: 毫秒)) */
+    UINT8 Resv2[2];
+    UINT32 CheckInterval;   /*两次刷卡检测间隔， 默认500ms*/
+} HAMOD_NFC_CARD_CFG_S, *PHAMOD_NFC_CARD_CFG_S;
+#define HAMOD_NFC_CARD_CFG_S_LEN sizeof(HAMOD_NFC_CARD_CFG_S)
+ASSERT_SIZEOF_TYPEDEF_STRUCT(HAMOD_NFC_CARD_CFG_S, 64);
+
+#define HALMOD_NFC_DATA_SIZE_MAX   16
+#define HALMOD_NFC_DATA_COUNT_MAX  8
+
+typedef struct
+{
+    UINT8 DataSize;
+    UINT8 Reserved[3];  /* 保留位 */
+    UINT8 Data[HALMOD_NFC_DATA_SIZE_MAX];
+} HALMOD_NFC_CARD_ATTR_S, *PHALMOD_NFC_CARD_ATTR_S;
+#define HALMOD_NFC_CARD_ATTR_S_LEN sizeof(HALMOD_NFC_CARD_ATTR_S)
+
+typedef struct
+{
+    HAMOD_NFC_CARD_CFG_S Cfg;
+    UINT8 DataCount;
+    UINT8 Reserved[3];  /* 保留位 */
+    HALMOD_NFC_CARD_ATTR_S Attr[HALMOD_NFC_DATA_COUNT_MAX];
+} HALMOD_NFC_CARD_INFO_S, *PHALMOD_NFC_CARD_INFO_S;
+#define HALMOD_NFC_CARD_INFO_S_LEN sizeof(HALMOD_NFC_CARD_INFO_S)
+
+typedef enum
+{
+    HALMOD_IRCUT_MODE_DAY = 0, 	/* 白天模式 */
+    HALMOD_IRCUT_MODE_NIGHT 	/* 夜晚模式 */
+} HALMOD_IRCUT_MODE_E;
+
+typedef enum
+{
+	HALMOD_WIFI_FREQ_2_4G	= 1 << 0, /* 2.4G频段 */
+	HALMOD_WIFI_FREQ_5G 	= 1 << 1, /* 5G频段 */
+	HALMOD_WIFI_FREQ_6G 	= 1 << 2, /* 6G频段 */
+} HALMOD_WIFI_FREQ_E;
+
+#define HALMOD_WIFI_SUPPORT_2_4G(Freq)  ((Freq) & HALMOD_WIFI_FREQ_2_4G)
+#define HALMOD_WIFI_SUPPORT_5G(Freq)    ((Freq) & HALMOD_WIFI_FREQ_5G)
+#define HALMOD_WIFI_SUPPORT_6G(Freq)    ((Freq) & HALMOD_WIFI_FREQ_6G)
+
+#define WIFI_MODEL_NAME_LEN 32
+typedef enum
+{
+	HALMOD_WIFI_GEN4 = 4, /* WIFI4 */
+	HALMOD_WIFI_GEN5 = 5, /* WIFI5 */
+	HALMOD_WIFI_GEN6 = 6, /* WIFI6 */
+} HALMOD_WIFI_GEN_E;
+
+typedef struct
+{
+	UINT8 Support;						/* 是否支持wifi功能 */
+	SINT8 Model[WIFI_MODEL_NAME_LEN];	/* WIFI型号 */
+	UINT32 Freq;						/* HALMOD_WIFI_FREQ_E */
+	UINT32 Gen; 						/* HALMOD_WIFI_GEN_E */
+} HALMOD_WIFI_INFO_S, *PHALMOD_WIFI_INFO_S;
+
+#define MAX_BATTERY_INFO_ATTR_BUF_SIZE			(32)
+typedef enum
+{
+	HALMOD_BATTERY_STATUS_UNKNOWN			= 0,	/* 未知 */
+	HALMOD_BATTERY_STATUS_CHARGING			= 1,	/* 正在充电 */
+	HALMOD_BATTERY_STATUS_DISCHARGING		= 2,	/* 正在放电 */
+	HALMOD_BATTERY_STATUS_NOT_CHARGING		= 3,	/* 未充电 */
+	HALMOD_BATTERY_STATUS_FULL				= 4,	/* 充满 */
+} HALMOD_BATTERY_STATUS_E;
+
+typedef enum
+{
+	HALMOD_BATTERY_TECH_UNKNOWN 			= 0,	/* 未知 */
+	HALMOD_BATTERY_TECH_LI_ION				= 1,	/* 锂离子电池 */
+} HALMOD_BATTERY_TECHNOLOGY_E;
+
+typedef enum
+{
+	HALMOD_BATTERY_HEALTH_UNKNOWN			= 0,	/* Unknown */
+	HALMOD_BATTERY_HEALTH_GOOD				= 1,	/* Good */
+	HALMOD_BATTERY_HEALTH_OVERHEAT			= 2,	/* Overheat */
+	HALMOD_BATTERY_HEALTH_DEAD				= 3,	/* Dead */
+	HALMOD_BATTERY_HEALTH_OVERVOLTAGE		= 4,	/* Over voltage */
+} HALMOD_BATTERY_HEALTH_E;
+
+typedef struct
+{
+	UINT8 Support;									/* 结果是否有效 */
+	UINT32 Capacity;								/* 电池电量（百分比） */
+	HALMOD_BATTERY_STATUS_E Status; 				/* 电池充放电状态（HALMOD_BATTERY_STATUS_E） */
+	UINT32 VoltageNow;								/* 当前电池电压（微伏）（1V=1000mV=1000000uV） */
+	UINT32 TimeToEmptyNow;							/* 预估可用时长（分钟） */	
+	HALMOD_BATTERY_TECHNOLOGY_E Technology; 		/* 电池化学类型（HALMOD_BATTERY_TECHNOLOGY_E, 如：锂离子电池） */	
+	HALMOD_BATTERY_HEALTH_E Health; 				/* 电池健康状态（HALMOD_BATTERY_HEALTH_E, "Unknown", "Good", "Overheat", "Dead", "Over voltage"等） */
+} HALMOD_BATTERY_INFO_S, *PHALMOD_BATTERY_INFO_S;
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+#endif /* __HALMOD_TYPES_H__ */

@@ -1,0 +1,333 @@
+
+/*!
+*\file   tagLog.h
+*\brief  运行日志类型及详细信息定义
+*\author yuk@higheasyrd.com
+*\date	  2009/04/28
+*\version 0.1
+*/
+
+#ifndef __TAG_LOG_H_
+#define __TAG_LOG_H_
+
+#include "global_macro.h"
+
+//!\brief 日志类型
+//##ModelId=49B5C8C6031C
+enum EDVR_EVENT_TYPE
+{
+	//!系统管理日志
+	//##ModelId=49B5C9AE0168
+	EDVR_EVENT_OPT = 0,
+
+	//!系统配置日志
+	//##ModelId=49B788ED0138
+	EDVR_EVENT_SETTING,			//1
+
+	//!录像日志
+	//##ModelId=49B788ED0177
+	EDVR_EVENT_RECORD,			//2
+
+	//!用户管理日志
+	//##ModelId=49B788ED01B5
+	EDVR_EVENT_USER,			//3
+
+	//!报警日志
+	//##ModelId=49B5C9AE0177
+	EDVR_EVENT_ALARM,			//4
+
+	//!异常日志
+	//##ModelId=49B788ED01E4
+	EDVR_EVENT_EXC,				//5
+
+	//!存储管理日志
+	//##ModelId=49B88E490167
+	EDVR_EVENT_STORAGE,			//6
+
+	//!所有类型
+	EDVR_EVENT_ALL				//7
+};
+
+//!\brief 系统操作详细信息
+//##ModelId=49B5C8DC01D4
+enum EDVR_EVENT_OPT_DETAIL
+{
+	//!升级
+	//##ModelId=49B788F100FA
+	EDVR_EVENT_OPT_DETAIL_UPDATE = 0,
+
+	//!云台控制
+	//##ModelId=49B788F10157
+	EDVR_EVENT_OPT_DETAIL_PTZ_CTL,	//1
+
+	//!非法关机
+	//##ModelId=49B788F101A5
+	EDVR_EVENT_OPT_DETAIL_ILLEGAL_SHUTDOWN,	//2
+
+	//!关机
+	//##ModelId=49B788F10203
+	EDVR_EVENT_OPT_DETAIL_SHUTDOWN,	//3
+
+	//!开机
+	//##ModelId=49B788F10261
+	EDVR_EVENT_OPT_DETAIL_POWERON,	//4
+
+	//!远程重启
+	//##ModelId=49B788F102BF
+	EDVR_EVENT_OPT_DETAIL_REMOTE_RESTART,	//5
+
+	//!消警
+	//##ModelId=49B788F103D8
+	EDVR_EVENT_OPT_DETAIL_CLEAR_ALARM	//6
+};
+
+//!\brief 系统设置日志详细信息
+//##ModelId=49B5C8F000CB
+enum EDVR_EVENT_SETTING_DETAIL
+{
+	//!录像时间表设置
+	//##ModelId=49B788ED02CE
+	EDVR_EVENT_SETTING_DETAIL_TIMER_SETTING = 0,
+
+	//!普通设置
+	//##ModelId=49B788ED034B
+	EDVR_EVENT_SETTING_DETAIL_COMMON_SETTING,	//1
+
+	//编码设置
+	//##ModelId=49B788ED03B9
+	EDVR_EVENT_SETTING_DETAIL_CODEC_SETTING,	//2
+
+	//!网络设置
+	//##ModelId=49B788EE003E
+	EDVR_EVENT_SETTING_DETAIL_NETWORK_SETTING,	//3
+
+	//!服务器设置
+	//##ModelId=49B788EE00AB
+	EDVR_EVENT_SETTING_DETAIL_SERVER_SETTING,	//4
+
+	//!移动侦测设置
+	//##ModelId=49B788EE0119
+	EDVR_EVENT_SETTING_DETAIL_MOTION_SETTING,	//5
+
+	//!云台解码器设置
+	//##ModelId=49B788EE0196
+	EDVR_EVENT_SETTING_DETAIL_PTZ_SETTING,	//6
+
+	//!恢复默认设置
+	//##ModelId=49B788EE0203
+	EDVR_EVENT_SETTING_DETAIL_DEFAULT_SETTING,	//7
+
+	//!设置显示设备参数
+	//##ModelId=49B788EE0271
+	EDVR_EVENT_SETTING_DETAIL_DISPLAY_DEVICE_SETTING,	//8
+
+	//!显示模式设置（分屏模式）
+	//##ModelId=49B788EE02EE
+	EDVR_EVENT_SETTING_DETAIL_DISPLAY_MODE_SETTING,	//9
+
+	//!图像颜色设置
+	//##ModelId=49B788EE036B
+	EDVR_EVENT_SETTING_DETAIL_PICTURE_SETTING,	//10
+
+	//!自动维护设置
+	//##ModelId=49B788EF0000
+	EDVR_EVENT_SETTING_DETAIL_MAINTAIN_SETTING,	//11
+
+	//!报警输出设置
+	//##ModelId=49B788EF007D
+	EDVR_EVENT_SETTING_DETAIL_ALARMOUT_SETTING,	//12
+
+	//!报警输入设置
+	//##ModelId=49B788EF00FA
+	EDVR_EVENT_SETTING_DETAIL_ALARMIN_SETTING,	//13
+
+	//!功能定制设置
+	//##ModelId=49B788EF0177
+	EDVR_EVENT_SETTING_DETAIL_CUSTOMIZE_FUNCTION,	//14
+
+	//!导入PTZ协议
+	//##ModelId=49B788EF01F4
+	EDVR_EVENT_SETTING_DETAIL_IMPORT_PTZ,	//15
+
+	//!导出PTZ协议
+	//##ModelId=49B788EF0261
+	EDVR_EVENT_SETTING_DETAIL_EXPORT_PTZ,	//16
+
+	//!导入参数配置
+	//##ModelId=49B788EF02EE
+	EDVR_EVENT_SETTING_DETAIL_IMPORT_SETTINGS,	//17
+
+	//!导出参数配置
+	//##ModelId=49B788EF036B
+	EDVR_EVENT_SETTING_DETAIL_EXPORT_SETTINGS,	//18
+
+	//!异常参数配置
+	//##ModelId=49B788F0001F
+	EDVR_EVENT_SETTING_DETAIL_EXCEPTION_SETTING	//19
+};
+
+//!\brief 异常事件详细信息
+//##ModelId=49B5C91A0232
+enum EDVR_EVENT_EXC_DETAIL
+{
+	//!IP冲突
+	//##ModelId=49B788F201E4
+	EDVR_EVENT_EXC_DETAIL_IP_CONFILICT = 0,
+
+	//!硬盘满
+	//##ModelId=49B788F20222
+	EDVR_EVENT_EXC_DETAIL_HD_FULL,	//1
+
+	//!硬盘错误
+	//##ModelId=49B788F20261
+	EDVR_EVENT_EXC_DETAIL_HD_ERROR,	//2
+
+	//!非法访问
+	//##ModelId=49B788F202AF
+	EDVR_EVENT_EXC_DETAIL_ILLEGAL_ACCESS,	//3
+
+	//!信号丢失
+	//##ModelId=49B788F202EE
+	EDVR_EVENT_EXC_DETAIL_SIGNAL_LOST,	//4
+
+	//!信号恢复
+	//##ModelId=49B788F2033C
+	EDVR_EVENT_EXC_DETAIL_SIGNAL_RECOVER,	//5
+
+	//!网线断
+	EDVR_EVENT_EXC_DETAIL_NETWORK_DISCONNECT	//6
+};
+
+//用户管理日志
+//##ModelId=49B786CE0280
+enum EDVR_EVENT_USR_DETAIL
+{
+	//!添加用户
+	//##ModelId=49B788EC035B
+	EDVR_EVENT_USR_DETAIL_ADD_USER = 0,
+
+	//!删除用户
+	//##ModelId=49B788EC03A9
+	EDVR_EVENT_USR_DETAIL_REMOVE_USER,	//1
+
+	//!修改用户资料
+	//##ModelId=49B788ED0000
+	EDVR_EVENT_USR_DETAIL_EDIT_USER,	//2
+
+	//!登陆
+	//##ModelId=49B788ED002E
+	EDVR_EVENT_USR_DETAIL_LOGIN,	//3
+
+	//!注销
+	//##ModelId=49B788ED006D
+	EDVR_EVENT_USR_DETAIL_LOGOUT	//4
+};
+
+//!\brief  报警子类型详细信息
+//##ModelId=49B5C93B01C5
+enum EDVR_EVENT_ALARM_DETAIL
+{
+	//!移动侦测报警开始
+	//##ModelId=49B788F3006D
+	EDVR_EVENT_ALARM_DETAIL_MOTION_START = 0,
+
+	//!移动侦测报警开始
+	//##ModelId=49B788F300AB
+	EDVR_EVENT_ALARM_DETAIL_MOTION_STOP,	//1
+
+	//!输入报警开始
+	//##ModelId=49B788F300EA
+	EDVR_EVENT_ALARM_DETAIL_INPUT_ALARM,	//2
+
+	//!人脸检测报警开始
+	//##ModelId=49B788F3006D
+	EDVR_EVENT_ALARM_DETAIL_FACE_DETECT_START,
+
+	//!人脸检测报警结束
+	//##ModelId=49B788F300AB
+	EDVR_EVENT_ALARM_DETAIL_FACE_DETECT_STOP
+};
+
+//!\brief 存储管理日志详细信息
+//##ModelId=49B88E8D001F
+enum EDVR_EVENT_STORAGE_DETAIL
+{
+	//!分区格式化
+	//##ModelId=49B88EC10232
+	EDVR_EVENT_STORAGE_DETAIL_FORMAT_PARTITION,
+
+	//!添加分区
+	//##ModelId=49B88EE903A9
+	EDVR_EVENT_STORAGE_DETAIL_ADD_PARTITION,
+
+	//!删除分区
+	//##ModelId=49B88F09000F
+	EDVR_EVENT_STORAGE_DETAIL_REMOVE_PARTITION,
+
+	//!卸载硬盘
+	//##ModelId=49B88F260109
+	EDVR_EVENT_STORAGE_DETAIL_UMOUNT_DISK,
+
+	//!管理盘组
+	//##ModelId=49B88F3F0203
+	EDVR_EVENT_STORAGE_DETAIL_MANAGE_DISKGROUP,
+
+	//!初始化磁盘
+	EDVR_EVENT_STORAGE_DETAIL_INITIALIZE_DISK
+};
+
+//录像详细信息
+//##ModelId=49B7870603D8
+enum EDVR_EVENT_RECORD_DETAIL
+{
+	//手动录像开始
+	//##ModelId=49B788F003A9
+	EDVR_EVENT_RECORD_DETAIL_START_MANUALRECORD,
+
+	//自动录像开始
+	//##ModelId=49B788F10000
+	EDVR_EVENT_RECORD_DETAIL_START_AUTORECORD,
+
+	//录像结束
+	//##ModelId=49B788F1003E
+	EDVR_EVENT_RECORD_DETAIL_STOP_RECORD
+};
+
+//!\brief 日志内容
+//##ModelId=49B5F1C6009C
+struct tagLog
+{
+  public:
+	//!\brief 日志发生时间
+	//##ModelId=49B5F2E80119
+	unsigned long dwTime;
+
+	//!\brief 日志事件类型
+	//##ModelId=49B5F2E80139
+	unsigned long dwEventType;
+
+	//!\brief 日志详细信息
+	//##ModelId=49B5F2E8013B
+	unsigned long dwEventDetail;
+
+	//!\brief 通道号
+	//##ModelId=49B6034003B9
+	unsigned long dwChannel;
+
+	//!\brief 联动录像的通道标记
+	//##ModelId=49BB54C7034B
+	unsigned long long u64RecordChannelFlag;
+
+	//!本地、远程
+	//##ModelId=49B5F2E8013C
+	unsigned long dwRemote;
+
+	//!\brief 用户名
+	//##ModelId=49B5F2E8013D
+	char strUsername[MAX_USERNAME_LEN + 4];
+};
+
+//##ModelId=49B5F1F10128
+typedef struct tagLog LOG, *PLOG;
+
+#endif
