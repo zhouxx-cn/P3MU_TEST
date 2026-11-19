@@ -2315,19 +2315,12 @@ int HY_Enc_PlatformInit()
     s32Ret = Xrs_Lcd_StartLCD(pChCtx->pPlatformChannelhandle);
 
     s32Ret = Xrs_Lcd_StartVdec(pChCtx->pPlatformChannelhandle);
+
+    s32Ret = Xrs_Lcd_CreateVdecChn(0);
 #endif
 
     // 最后起SceneAuto
-#if defined (__PRODUCT_P4__)||defined(__PRODUCT_P4U__)
-    s32Ret = Visp_Start_SceneAuto(0, HISI_SCENEAUTO_PATH_JXK06A, 0);
-#elif defined(__PRODUCT_G85T__) || defined(__PRODUCT_W85T__)
-    s32Ret = Visp_Start_SceneAuto(0, HISI_SCENEAUTO_PATH_F38PA, 0);
-#elif defined(__PRODUCT_G43TA__) || defined(__PRODUCT_G84F__)||defined (__PRODUCT_W84F__) || defined (__PRODUCT_G63F__)|| defined (__PRODUCT_W63F__)
-    s32Ret = Visp_Start_SceneAuto(0, HISI_SCENEAUTO_PATH_GC20C3, 0);
-#else
     s32Ret = Visp_Start_SceneAuto(0, HISI_SCENEAUTO_PATH, 0);
-#endif
-
     if (s32Ret < 0)
     {
         ZW_ERROR("Visp_Start_SceneAuto failed\n");
@@ -2591,121 +2584,6 @@ int HY_Enc_ReadOneFrame(CChannelContext *pChannelContext,
         else if(*pFrameType == PktPFrames)
             *pFrameType = PktQCIFPFrames;
     }
-#if (SYSTEM_SUPPORT_CHANNEL >= 2)
-    else if (CallBackType == STREAM_CALLBACK_MAIN_SEC)     // 第二sensor 主码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_EncType, FIRST_STREAM, SEC_SENSOR))
-        {
-            return -1;
-        }
-        if (*pFrameType == PktIFrames)
-            *pFrameType = PktIFramesForS1;
-        else if (*pFrameType == PktPFrames)
-            *pFrameType = PktPFramesForS1;
-    }
-    else if (CallBackType == STREAM_CALLBACK_SUB_SEC)    // 第二sensor 子码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_AuxEncType, SECOND_STREAM, SEC_SENSOR))
-        {
-            return -1;
-        }
-        if(*pFrameType == PktIFrames)
-            *pFrameType = PktQCIFIFramesForS1;
-        else if(*pFrameType == PktPFrames)
-            *pFrameType = PktQCIFPFramesForS1;
-    }
-    else if (CallBackType == STREAM_CALLBACK_MJPEG_SEC)   // 第二sensor 四码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_FourthEncType, FOURTH_STREAM, SEC_SENSOR))
-        {
-            return -1;
-        }
-        if(*pFrameType == PktIFrames)
-            *pFrameType = PktFourthIFramesForS1;
-        else if(*pFrameType == PktPFrames)
-            *pFrameType = PktFourthPFramesForS1;
-    }
-#endif
-#if (SYSTEM_SUPPORT_CHANNEL >= 3)
-    else if (CallBackType == STREAM_CALLBACK_MAIN_THIRD)     // 第三sensor 主码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_EncType, FIRST_STREAM, THIRD_SENSOR))
-        {
-            return -1;
-        }
-        if (*pFrameType == PktIFrames)
-            *pFrameType = PktIFramesForS2;
-        else if (*pFrameType == PktPFrames)
-            *pFrameType = PktPFramesForS2;
-    }
-    else if (CallBackType == STREAM_CALLBACK_SUB_THIRD)    // 第三sensor 子码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_AuxEncType, SECOND_STREAM, THIRD_SENSOR))
-        {
-            return -1;
-        }
-        if(*pFrameType == PktIFrames)
-            *pFrameType = PktQCIFIFramesForS2;
-        else if(*pFrameType == PktPFrames)
-            *pFrameType = PktQCIFPFramesForS2;
-    }
-    else if (CallBackType == STREAM_CALLBACK_MJPEG_THIRD)   // 第三sensor 四码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_FourthEncType, FOURTH_STREAM, THIRD_SENSOR))
-        {
-            return -1;
-        }
-        if(*pFrameType == PktIFrames)
-            *pFrameType = PktFourthIFramesForS2;
-        else if(*pFrameType == PktPFrames)
-            *pFrameType = PktFourthPFramesForS2;
-    }
-
-#endif
-#if (SYSTEM_SUPPORT_CHANNEL >= 4)
-    else if (CallBackType == STREAM_CALLBACK_MAIN_FOURTH)     // 第四sensor 主码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_EncType, FIRST_STREAM, FOURTH_SENSOR))
-        {
-            return -1;
-        }
-        if (*pFrameType == PktIFrames)
-            *pFrameType = PktIFramesForS3;
-        else if (*pFrameType == PktPFrames)
-            *pFrameType = PktPFramesForS3;
-    }
-    else if (CallBackType == STREAM_CALLBACK_SUB_FOURTH)    // 第四sensor 子码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_AuxEncType, SECOND_STREAM, FOURTH_SENSOR))
-        {
-            return -1;
-        }
-        if(*pFrameType == PktIFrames)
-            *pFrameType = PktQCIFIFramesForS3;
-        else if(*pFrameType == PktPFrames)
-            *pFrameType = PktQCIFPFramesForS3;
-    }
-    else if (CallBackType == STREAM_CALLBACK_MJPEG_FOURTH)   // 第四sensor 四码流
-    {
-        if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
-                                   pFrameType, pChCtx->m_FourthEncType, FOURTH_STREAM, FOURTH_SENSOR))
-        {
-            return -1;
-        }
-        if(*pFrameType == PktIFrames)
-            *pFrameType = PktFourthIFramesForS3;
-        else if(*pFrameType == PktPFrames)
-            *pFrameType = PktFourthPFramesForS3;
-    }
-#endif
     else if (CallBackType == STREAM_CALLBACK_MJPEG)   // 四码流
     {
         if(0 != Hi_MPP_ReadStream(pChCtx->pPlatformChannelhandle, pFirstDataBuf, pFirstLength, &pChCtx->m_RealTime, &pChCtx->m_RealTime_USec,
@@ -5821,7 +5699,8 @@ int HY_Enc_LCDSetBackLightLevel(int level)
 
 int HY_Enc_LCDCreateVdecChn(int nType)
 {
-    return Xrs_Lcd_CreateVdecChn(nType);
+    return 0;
+    //return Xrs_Lcd_CreateVdecChn(nType);
 }
 
 int HY_Enc_LCDSendStreamToChn(int nType, char *pData, unsigned int DataSize)
@@ -5831,7 +5710,8 @@ int HY_Enc_LCDSendStreamToChn(int nType, char *pData, unsigned int DataSize)
 
 int HY_Enc_LCDDestoryVdecChn(int nType)
 {
-    return Xrs_Lcd_DestoryVdecChn(nType);
+    return 0;
+    //return Xrs_Lcd_DestoryVdecChn(nType);
 }
 #endif
 

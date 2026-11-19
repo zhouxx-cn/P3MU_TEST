@@ -1553,6 +1553,8 @@ int Hi_MPP_DeInit(void)
 
     s32Ret = Xrs_Lcd_StopLCD();
     DBG_ASSERT(s32Ret == 0, s32Ret, "Called Xrs_Lcd_StopLCD fail");
+
+    s32Ret = Xrs_Lcd_DestoryVdecChn(0);
 #endif
 
     /*编码模块反初始化*/
@@ -2082,26 +2084,7 @@ int Hi_MPP_ReadStream(void *hChannelHandle,
             break;
         default:
             break;
-    }
-#if (SYSTEM_SUPPORT_CHANNEL >= 2)
-
-    if (SensorIndex == SEC_SENSOR)
-    {
-        FrameHead.uReserved = 1;
-    }
-#endif
-#if (SYSTEM_SUPPORT_CHANNEL >= 3)
-    else if (SensorIndex == THIRD_SENSOR)
-    {
-        FrameHead.uReserved = 2;
-    }
-#endif
-#if (SYSTEM_SUPPORT_CHANNEL >= 4)
-    else if (SensorIndex == FOURTH_SENSOR)
-    {
-        FrameHead.uReserved = 3;
-    }
-#endif
+        }
 
     if(pstStreamData->SecFrmType == MSSTD_STREAM_FRAME_IFRM_VIRT)
     {
