@@ -2466,6 +2466,7 @@ int HY_Enc_ForceIFrame(CChannelContext *pChannelContext, int nSensorIndex)
 
 int HY_Enc_SwitchPicFormat(CChannelContext *pChannelContext, int EncChannel)
 {
+    return 0;
     int s32Ret = 0;
     SystemInfo_t *pSysInfo = NULL;
     CChannelContext *pChCtx = NULL;

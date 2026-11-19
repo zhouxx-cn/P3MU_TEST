@@ -160,6 +160,7 @@
                     </Resolution>
                 </ResList>
             </Snapshot>
+            <HidePreviewPeopleTrack>true</HidePreviewPeopleTrack>
         </AppUI>
         <Protocol>
             <P6SMessageV2>

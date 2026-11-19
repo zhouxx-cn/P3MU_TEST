@@ -1297,6 +1297,7 @@ int     MP4Sys_EncGetStreamType(void *hChannelHandle, unsigned short *StreamType
 //-----------------------------------------------------------------------------
 int MP4Sys_EncSetCodecPara(void *hChannelHandle, int EncChannel, CODEC_PARA_S *ppCodecPara, EncodeType_t encType)
 {
+    return 0;
     int                 s32Ret = 0;
     int					BitRate = 0;		   //Bit率
     int					FrameRate = 0;		   //帧率
@@ -1616,6 +1617,7 @@ int MP4Sys_EncSetCodecPara(void *hChannelHandle, int EncChannel, CODEC_PARA_S *p
 //-----------------------------------------------------------------------------
 int     MP4Sys_EncSetCodecParaExt(void *hChannelHandle, int stream, CODEC_PARA_S_EXT *ppCodecPara)
 {
+    return 0;
     CChannelContext		*pChannelContext = (CChannelContext*)hChannelHandle;
     SystemInfo_t		*pSysInfo;
     int					KeyFrameInterval;  //关键帧间隔

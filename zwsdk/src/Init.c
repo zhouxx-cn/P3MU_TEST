@@ -652,31 +652,20 @@ int Zview_EncChInfo_Init(SystemInfo_t *pSysInfo)
     pChnCtx->m_EncAttr.PictureRes.m_PicWidth = pChnCtx->m_PictureRes[FIRST_STREAM].m_PicWidth;
     pChnCtx->m_EncAttr.PictureRes.m_PicHeight = pChnCtx->m_PictureRes[FIRST_STREAM].m_PicHeight;
     pChnCtx->m_EncAttr.BitRate = MAIN_STREAM_VBR_MAX_BITRATE;
-#if defined(__IS_SUPPORT_12FPS__)
-    pChnCtx->m_EncAttr.FrameRate = 12;
-#else
-    pChnCtx->m_EncAttr.FrameRate = 15;
-#endif
+    pChnCtx->m_EncAttr.FrameRate = MAX_FPS;
     pChnCtx->m_EncAttr.BitRateCtlMode = ENCODE_BITRATE_CTRLMODE_AVBR;
     pChnCtx->m_EncAttr.PicQualityLever = 0;
-    pChnCtx->m_EncAttr.EncType = LtH265Video;
-#if defined(__PRODUCT_G85T__)
-    pChnCtx->m_EncAttr.EncType = LtH265PlusVideo;
-#endif
+    pChnCtx->m_EncAttr.EncType = LtH264Video;
     pChnCtx->m_EncAttr.KeyFrameInterval = pChnCtx->m_EncAttr.FrameRate*4;
 
     pChnCtx->m_EncAttrAux.PictureRes.m_PicWidth = pChnCtx->m_PictureRes[SECOND_STREAM].m_PicWidth;
     pChnCtx->m_EncAttrAux.PictureRes.m_PicHeight = pChnCtx->m_PictureRes[SECOND_STREAM].m_PicHeight;
     pChnCtx->m_EncAttrAux.BitRate = AUX_STREAM_VBR_MAX_BITRATE;
-#if defined(__IS_SUPPORT_12FPS__)
-    pChnCtx->m_EncAttrAux.FrameRate = 12;
-#else
-    pChnCtx->m_EncAttrAux.FrameRate = 10;
-#endif
+    pChnCtx->m_EncAttrAux.FrameRate = MAX_FPS;
 
     pChnCtx->m_EncAttrAux.BitRateCtlMode = ENCODE_BITRATE_CTRLMODE_AVBR;
     pChnCtx->m_EncAttrAux.PicQualityLever = 0;
-    pChnCtx->m_EncAttrAux.EncType = LtH265Video;
+    pChnCtx->m_EncAttrAux.EncType = LtH264Video;
     pChnCtx->m_EncAttrAux.KeyFrameInterval = pChnCtx->m_EncAttrAux.FrameRate*4;
 
     if (pChnCtx->m_bSupportFourthStream)

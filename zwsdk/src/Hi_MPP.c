@@ -24,11 +24,7 @@
 /* 全局变量 */
 int g_subSyncFlag[SUPPORT_MAX_SENSOR_COUNT] = {0};
 static int g_DrawRectFlag[ALGO_CHANNEL][SECOND_STREAM+1] = {0};  //创建画框标记
-#if defined(__IS_SUPPORT_12FPS__)
-static int g_nCurSensorFrame = 12;                                      //当前Sensor帧率
-#else
-static int g_nCurSensorFrame = 15;                                      //当前Sensor帧率
-#endif
+static int g_nCurSensorFrame = MAX_FPS;                          //当前Sensor帧率
 
 #ifdef __IS_SUPPORT_JZ_CRY_DETECT__
 //声音侦测缓冲区信息
@@ -1701,6 +1697,7 @@ SINT32 Hi_MPP_ChangeEncFps(void *hChannelHandle, int bCtrlFps)
  */
 SINT32 Hi_MPP_ChangeSensorFps(void *hChannelHandle, int nChn, FLOAT32 SensorFps)
 {
+#if 0
     /* 1114：不支持动态修改VI帧率，待后续HS解决后放开 */
     SINT32 RetVal = 0;
     RetVal = Vi_Chn_Set_Attr(0, nChn, SensorFps);
@@ -1710,6 +1707,7 @@ SINT32 Hi_MPP_ChangeSensorFps(void *hChannelHandle, int nChn, FLOAT32 SensorFps)
         ZW_ERROR("Vi_Chn_Set_Attr SensorFps=%f nChn %d Failed\n", SensorFps, nChn);
         return -1;
     }
+#endif
     return 0;
 }
 
@@ -5563,53 +5561,7 @@ SINT32 Hi_MPP_InitVi(void *hChannelHandle)
             return -1;
         }
         ViConf.SnsConf[i].Mode = VISP_SENSOR_MODE_RGB;
-#if defined (__PRODUCT_P4__)||defined(__PRODUCT_P4U__)
-        ViConf.SnsConf[i].Type = VISP_SENSOR_JXK06A_MIPI_4M_30FPS_10BIT_2LANE;
-#elif defined (__PRODUCT_P3MU__)
         ViConf.SnsConf[i].Type = VISP_SENSOR_GC20C3_MIPI_2M_30FPS_10BIT_2LANE;
-#elif defined (__PRODUCT_G43TA__)||defined(__PRODUCT_G84F__)||defined (__PRODUCT_W84F__)|| defined (__PRODUCT_G63F__)|| defined (__PRODUCT_W63F__)
-        ViConf.SnsConf[i].Type = VISP_SENSOR_GC20C3_MIPI_2M_30FPS_10BIT;
-#else
-        ViConf.SnsConf[i].Type = VISP_SENSOR_JXF38PA_MIPI_2M_30FPS_10BIT;
-#endif
-        switch (i)
-        {
-#if (SYSTEM_SUPPORT_CHANNEL >= 2)
-            case FIRST_SENSOR:
-#if defined(__PRODUCT_G84F__)||defined (__PRODUCT_W84F__)|| defined (__PRODUCT_G63F__)|| defined (__PRODUCT_W63F__)
-                ViConf.SnsConf[i].BusId = 0; ViConf.SnsConf[i].SnsAddr = 0x20;
-#else
-                ViConf.SnsConf[i].BusId = 0; ViConf.SnsConf[i].SnsAddr = ((ViConf.MaxViChn == 3) ? 0x88 : 0x8C);
-#endif
-                 break;
-            case SEC_SENSOR:
-#if defined(__PRODUCT_G84F__)||defined (__PRODUCT_W84F__)
-                ViConf.SnsConf[i].BusId = 1; ViConf.SnsConf[i].SnsAddr = 0x20;
-#elif defined (__PRODUCT_G63F__)|| defined (__PRODUCT_W63F__)
-				ViConf.SnsConf[i].BusId = 1; ViConf.SnsConf[i].SnsAddr = 0x62;
-#else
-                ViConf.SnsConf[i].BusId = 2; ViConf.SnsConf[i].SnsAddr = ((ViConf.MaxViChn == 3) ? 0x80 : 0x84);
-#endif
-                break;
-#endif
-#if (SYSTEM_SUPPORT_CHANNEL >= 3)
-            case THIRD_SENSOR:
-#if defined(__PRODUCT_G84F__)||defined (__PRODUCT_W84F__) || defined (__PRODUCT_G63F__)|| defined (__PRODUCT_W63F__)
-                ViConf.SnsConf[i].BusId = 0; ViConf.SnsConf[i].SnsAddr = 0x62; break;
-#else
-                ViConf.SnsConf[i].BusId = 0; ViConf.SnsConf[i].SnsAddr = 0x80; break;
-#endif
-#endif
-#if (SYSTEM_SUPPORT_CHANNEL >= 4)
-            case FOURTH_SENSOR:
-#if defined(__PRODUCT_G84F__)||defined (__PRODUCT_W84F__)
-                ViConf.SnsConf[i].BusId = 1; ViConf.SnsConf[i].SnsAddr = 0x62; break;
-#else
-                ViConf.SnsConf[i].BusId = 2; ViConf.SnsConf[i].SnsAddr = 0x80; break;
-#endif
-#endif
-            default: break;
-        }
     }
 
     if ((RtVal = Vi_Open(ViConf.MaxViChn, pPlatCtx->m_ChipConf, ViConf)) < 0)
@@ -5703,7 +5655,7 @@ SINT32 Hi_MPP_InitVpssChn(void *hChannelHandle)
     pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][FIRST_STREAM].VpssParam.width   = pPlatCtx->m_stStreamAttr[FIRST_SENSOR][FIRST_STREAM].u32Width;
     pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][FIRST_STREAM].VpssParam.height  = pPlatCtx->m_stStreamAttr[FIRST_SENSOR][FIRST_STREAM].u32Height;
     //pPlatCtx->m_stVpssChnAttr[FIRST_STREAM].VpssParam.OutFrmRate	= (pSysInfo->m_Frequ_HZ == CMOS_FREQUENCY_60HZ) ? 30 : 25;
-    pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][FIRST_STREAM].VpssParam.OutFrmRate	= 15;
+    pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][FIRST_STREAM].VpssParam.OutFrmRate = MAX_FPS;
     pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][FIRST_STREAM].VpssParam.Depth 		= 0;
 
     //子码流
@@ -5711,7 +5663,7 @@ SINT32 Hi_MPP_InitVpssChn(void *hChannelHandle)
     pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][SECOND_STREAM].VpssParam.width       	= pPlatCtx->m_stStreamAttr[FIRST_SENSOR][SECOND_STREAM].u32Width;
     pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][SECOND_STREAM].VpssParam.height      	= pPlatCtx->m_stStreamAttr[FIRST_SENSOR][SECOND_STREAM].u32Height;
     //pPlatCtx->m_stVpssChnAttr[SECOND_STREAM].VpssParam.OutFrmRate	= (pSysInfo->m_Frequ_HZ == CMOS_FREQUENCY_60HZ) ? 30 : 25;
-    pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][SECOND_STREAM].VpssParam.OutFrmRate	= 15;
+    pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][SECOND_STREAM].VpssParam.OutFrmRate = MAX_FPS;
     pPlatCtx->m_stVpssChnAttr[FIRST_SENSOR][SECOND_STREAM].VpssParam.Depth 		= 1;
 
     //算法通道
@@ -6949,6 +6901,7 @@ int Hi_MPP_GetRealKeyFrameInterval(int nChannel,int *nFrameRateInterval, int *nK
  */
 SINT32 Hi_MPP_SetEncPara(void *hChannelHandle, CODEC_PARA_S *pParam, ENCODE_STREAM_E Chn, int iSetFrom, int SlowFrameMode)
 {
+#if 0
     SINT32 s32Ret = 0;
     UINT32 eEncType = -1;
     VENC_ENCODEPARAM_S SrcParam = {0};
@@ -7096,6 +7049,7 @@ SINT32 Hi_MPP_SetEncPara(void *hChannelHandle, CODEC_PARA_S *pParam, ENCODE_STRE
     }
 
     ZW_DEBUG("Chang Encode Param SUCCESS Chn[%d]\n", Chn);
+#endif
     return 0;
 }
 
@@ -7114,6 +7068,7 @@ SINT32 Hi_MPP_SetEncPara(void *hChannelHandle, CODEC_PARA_S *pParam, ENCODE_STRE
 */
 SINT32 Hi_MPP_SetVencFrameRateV2(void *hChannelHandle, ENCODE_STREAM_E ChnType, int FrmRate, int slowframemode)
 {
+#if 0
     int nRet = 0;
     int SrcFrmRate = 0;
 #if defined(__IS_SUPPORT_12FPS__)
@@ -7193,7 +7148,7 @@ SINT32 Hi_MPP_SetVencFrameRateV2(void *hChannelHandle, ENCODE_STREAM_E ChnType, 
             Hi_MPP_SetQPAttr(eChnType, pPlatCtx->m_MppEncChNum[i][ChnType]);
         }
     }
-
+#endif
     return 0;
 }
 
@@ -7394,16 +7349,8 @@ SINT32 Hi_MPP_InitUserEncodeParam(void *hChannelHandle,
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.BitRate     	= m_EncAttr->BitRate ? m_EncAttr->BitRate:INIT_MAIN_BPS;
     m_EncAttr->FrameRate = m_EncAttr->FrameRate ? m_EncAttr->FrameRate:((pSysInfo->m_Frequ_HZ==CMOS_FREQUENCY_60HZ) ? 30 : 25);
     Hi_MPP_GetGOPValueByNetType(m_EncAttr->FrameRate, (UINT16 *)(&m_EncAttr->KeyFrameInterval));
-    if (SLOWFRAME_SCENE_FORCESLOW == pChCtx->m_iSlowFrameMode)
-    {
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.FrameRate   = SLOWFRAME_ENCODER_RATE;
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.KeyInterval = SLOWFRAME_ENCODER_RATE*SLOWFRAME_GOP_RATIO;
-    }
-    else
-    {
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.FrameRate   = m_EncAttr->FrameRate;
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.KeyInterval = m_EncAttr->KeyFrameInterval;
-    }
+    pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.FrameRate = m_EncAttr->FrameRate;
+    pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.KeyInterval = m_EncAttr->KeyFrameInterval;
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.Quality     	= m_EncAttr->PicQualityLever;
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.BitRateType 	= m_EncAttr->BitRateCtlMode;
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][FIRST_STREAM].EncParam.bOffLine    	= 0;
@@ -7456,16 +7403,8 @@ SINT32 Hi_MPP_InitUserEncodeParam(void *hChannelHandle,
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.BitRate     = m_EncAttrAux->BitRate ? m_EncAttrAux->BitRate:INIT_AUX_BPS;
     //m_EncAttrAux->FrameRate ? m_EncAttrAux->FrameRate:MAX_AUX_FPS;
     Hi_MPP_GetGOPValueByNetType(m_EncAttrAux->FrameRate, (UINT16 *)(&m_EncAttrAux->KeyFrameInterval));
-    if (SLOWFRAME_SCENE_FORCESLOW == pChCtx->m_iSlowFrameMode)
-    {
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.FrameRate   = SLOWFRAME_ENCODER_RATE;
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.KeyInterval = SLOWFRAME_ENCODER_RATE*SLOWFRAME_GOP_RATIO;
-    }
-    else
-    {
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.FrameRate   = m_EncAttrAux->FrameRate;
-        pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.KeyInterval = m_EncAttrAux->KeyFrameInterval;
-    }
+    pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.FrameRate = m_EncAttrAux->FrameRate;
+    pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.KeyInterval = m_EncAttrAux->KeyFrameInterval;
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.Quality     = m_EncAttrAux->PicQualityLever;
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.BitRateType = m_EncAttrAux->BitRateCtlMode;
     pPlatCtx->m_stVencChnAttr[FIRST_SENSOR][SECOND_STREAM].EncParam.bOffLine    = 0;
