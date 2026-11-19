@@ -7,7 +7,6 @@ include ../../baseline/baseline_version.mk
 ifneq ($(findstring $(TYPE), Hi3516CV608 Hi3516CV610),)
 ARCH:=arm
 CROSS_COMPILE_PREFIX=arm-v01c02s020-linux-musleabi-
-CROSS_COMPILE_PATH=/opt/linux/x86-arm/arm-v01c02s020-linux-musleabi-gcc/bin/
 CFLAGS += -mcpu=cortex-a7 -mfloat-abi=softfp -mfpu=neon-vfpv4
 CFLAGS += -DEGUI_FOR_ICAMERA_NXP8850_BASED_DVR
 CFLAGS += -DACTIVE_CODE_SUPPORT -DDL_ACTIVE_CODE_SUPPORT
