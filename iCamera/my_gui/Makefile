@@ -210,6 +210,12 @@ INCLUDES=   -I../DVR_SDK \
             -I../DVR_SDK/PAR \
             -I../DVR_SDK/NET \
             -I../DVR_SDK/PUB_BORAD \
+			-I../DVR_SDK/ui/lvgl \
+            -I../DVR_SDK/ui/ui_main/ \
+            -I../DVR_SDK/ui/ui_video/ \
+            -I../DVR_SDK/ui/ui_menu/ \
+            -I../DVR_SDK/ui/ui_common/ \
+            -I../DVR_SDK/ui/ui_input/ \
             -I../modules/common 
 
 INCLUDES +=  -I../../baseline/$(BASELINE_INC)/mauth \

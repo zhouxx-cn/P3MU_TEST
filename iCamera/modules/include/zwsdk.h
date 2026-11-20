@@ -1413,7 +1413,6 @@ int ZWSys_GetCurrentSensor();
 #endif
 #endif
 
-#if defined(__IS_SUPPORT_LCD_MANAGER__)
 int ZWSys_LCDRefreshFrame(char *pData, unsigned int DataSize);
 
 int ZWSys_LCDSetBackLightLevel(int level);
@@ -1423,7 +1422,6 @@ int ZWSys_LCDCreateVdecChn(int nType);
 int ZWSys_LCDSendStreamToChn(int nType, char *pData, unsigned int DataSize);
 
 int ZWSys_LCDDestoryVdecChn(int nType);
-#endif
 
 int ZWSys_DownSdPower();
 

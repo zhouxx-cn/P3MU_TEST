@@ -165,7 +165,7 @@ cd iCamera/my_gui
 
 /* 1) 初始化并启动 UI（LVGL 全在内部 UI 线程） */
 ui_main_cfg_t cfg = {0};
-cfg.lcd_flush = lcd_hw_refresh;   /* 对接 DVR_SDK/LCD 的 REFRESH_CALLBACK，签名完全一致 */
+cfg.lcd_flush = my_lcd_send;   /* 整帧送显回调；内部调底层 Lcd_SendFrame(pData, size) */
 ui_main_init(&cfg);
 ui_main_start();
 
@@ -190,10 +190,13 @@ ui_input_app_on_json("{\"type\":\"click\",\"x\":120,\"y\":200}");
 | `int ui_main_start(void)` | 启动 UI 线程 |
 | `void ui_main_stop(void)` | 停止并反初始化 |
 
-`lcd_flush` 原型（与 LCD 层 `REFRESH_CALLBACK` 一致）：
+`lcd_flush` 原型（整帧送显，与底层 `Lcd_SendFrame` 一致）：
 ```c
-int (*)(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data, unsigned int size);
+int (*)(uint8_t *pData, uint32_t size);   /* pData=整帧240x320 RGB565, size=153600 */
 ```
+> LVGL 会把"视频底层 + 菜单浮层"**合成为一整帧**再回调，你只需把 `pData` 整块交给
+> `Lcd_SendFrame(pData, size)`。若 `Lcd_SendFrame` 返回 void，用一行适配函数包一下。
+> 送屏为【同步】用单缓冲(默认)，【异步 DMA】则在 `ui_port.c` 把 `UI_DISP_DOUBLE_BUF` 置 1。
 
 ### ui_video（`ui_video/ui_video.h`）
 | 接口 | 说明 |
@@ -219,7 +222,7 @@ int (*)(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data, unsigned 
 
 | 钩子 | 位置 | 样机默认 | 真机实现 |
 |---|---|---|---|
-| LCD 刷新 | `ui_main_cfg_t.lcd_flush` | 打印占位 | 接 LCD 层 `REFRESH_CALLBACK` |
+| LCD 整帧送显 | `ui_main_cfg_t.lcd_flush` | 打印占位 | 接底层 `Lcd_SendFrame(pData,size)` |
 | 物理按键读取 | `ui_key_scan_hw()`（弱函数，`ui_input_key.c`） | 返回无键 | 读 GPIO/ADC 返回 `UI_KEY_*` |
 | YUV→RGB | `ui_video_set_yuv2rgb()` | 内置软转 | 海思 VGS/IVE 硬转 |
 | VDEC/VENC | `ui_video_set_codec()` | 无 | 录像/抓拍/延时接 SnapShot 及编码 |

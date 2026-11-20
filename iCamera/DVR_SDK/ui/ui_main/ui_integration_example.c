@@ -20,17 +20,15 @@
 #include <unistd.h>
 #include <string.h>
 
-/* ========== 1) LCD 刷新回调：桥接到 DVR_SDK/LCD 层 ==========
- * 真机把这里替换为调用 lcd_layer 的 REFRESH_CALLBACK（签名完全一致）。
- * 例如直接把 Layer_SetRefreshCallback 注册的那个函数名填进来即可。 */
-extern int lcd_hw_refresh(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
-                          uint8_t *data, unsigned int size); /* 由 LCD 层提供 */
+/* ========== 1) LCD 整帧送显回调：桥接到 IPC 模拟机底层 ==========
+ * 真机底层提供 Lcd_SendFrame(UINT8 *pData, UINT32 Size)，只接受一整张
+ * 240x320 RGB565。若其返回 void，用下面的一行适配函数包一下即可。 */
+extern void Lcd_SendFrame(uint8_t *pData, uint32_t Size);   /* 由底层屏幕驱动提供 */
 
-/* 若暂时没有真实 LCD 回调，可用下面的占位（仅打印） */
-static int demo_lcd_flush(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
-                          uint8_t *data, unsigned int size)
+static int demo_lcd_flush(uint8_t *pData, uint32_t size)
 {
-    (void)x; (void)y; (void)w; (void)h; (void)data; (void)size;
+    /* 真机：Lcd_SendFrame(pData, size);  —— 整帧(视频+菜单已合成)直接送屏 */
+    (void)pData; (void)size;
     return 0;
 }
 
@@ -76,7 +74,7 @@ int app_ui_demo_main(void)
     /* 1) 初始化并启动 UI（LVGL 全在内部 UI 线程） */
     ui_main_cfg_t cfg;
     memset(&cfg, 0, sizeof(cfg));
-    cfg.lcd_flush = demo_lcd_flush;   /* 真机改为 lcd_hw_refresh */
+    cfg.lcd_flush = demo_lcd_flush;   /* 真机：在 demo_lcd_flush 里调 Lcd_SendFrame */
     if (ui_main_init(&cfg) != UI_OK) {
         return -1;
     }

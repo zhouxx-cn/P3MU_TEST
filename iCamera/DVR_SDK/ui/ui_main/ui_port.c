@@ -1,20 +1,34 @@
 /**
  * @file    ui_port.c
- * @brief   LVGL 移植层实现：display driver + tick 线程 + RGB565 flush。
+ * @brief   LVGL 移植层实现：display driver + tick 线程 + 整帧 RGB565 送显。
+ *
+ * @details
+ *  整帧模式：draw_buf 为全屏 240x320，full_refresh=1，LVGL 每帧把整屏
+ *  （视频底层 + 菜单浮层，已合成）渲染进一块缓冲，flush_cb 一次拿到整帧，
+ *  直接交给 Lcd_SendFrame(pData, size)。
+ *
+ *  缓冲策略（见 UI_DISP_DOUBLE_BUF）：
+ *   - 单缓冲（默认）：适用于 Lcd_SendFrame 为【同步】送屏（送完才返回）。
+ *     送屏期间 LVGL 阻塞在 flush 里，不会改缓冲，无撕裂，省一半内存（150KB）。
+ *   - 双缓冲：适用于 Lcd_SendFrame 为【异步 DMA】（立即返回）。把下面宏置 1，
+ *     LVGL 渲染下一帧到另一块缓冲，和正在送的那块错开，防撕裂（共 300KB）。
  */
 #include "ui_port.h"
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 
-/* 显示缓冲：240 宽 * 40 行双缓冲，RGB565。约 240*40*2 = 18.75KB/块。
- * 对 240x320 小屏，部分刷新(partial)足够流畅，又省内存。 */
-#define UI_DISP_BUF_LINES   40
-#define UI_DISP_BUF_PIXELS  (UI_SCREEN_W * UI_DISP_BUF_LINES)
+/* 0=单缓冲（同步送屏）；1=双缓冲（异步 DMA 送屏，防撕裂） */
+#define UI_DISP_DOUBLE_BUF 0
+
+/* 全屏缓冲：240*320 个 RGB565 像素 = 150KB/块 */
+#define UI_DISP_BUF_PIXELS (UI_SCREEN_W * UI_SCREEN_H)
 
 static lv_disp_draw_buf_t s_draw_buf;
 static lv_color_t         s_buf1[UI_DISP_BUF_PIXELS];
+#if UI_DISP_DOUBLE_BUF
 static lv_color_t         s_buf2[UI_DISP_BUF_PIXELS];
+#endif
 static lv_disp_drv_t      s_disp_drv;
 
 static ui_lcd_flush_fn    s_flush_fn = NULL;
@@ -35,25 +49,23 @@ static void *tick_thread_entry(void *arg)
 }
 
 /* ---------- 弱 flush：未提供 LCD 回调时的占位（仅调试）---------- */
-static int default_flush(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
-                         uint8_t *data, unsigned int size)
+static int default_flush(uint8_t *pData, uint32_t size)
 {
-    UI_UNUSED(data);
-    UI_LOGD("flush (%u,%u) %ux%u size=%u (no lcd cb)", x, y, w, h, size);
+    UI_UNUSED(pData);
+    UI_LOGD("flush whole frame size=%u (no lcd cb)", size);
     return 0;
 }
 
-/* ---------- LVGL flush_cb：把渲染区域送到 LCD ---------- */
+/* ---------- LVGL flush_cb：整帧送到 LCD ----------
+ * full_refresh=1 时，area 恒为全屏(0,0,239,319)，color_p 是整帧起始像素。
+ * 直接把整帧交给 Lcd_SendFrame。 */
 static void disp_flush_cb(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_p)
 {
-    uint16_t x = (uint16_t)area->x1;
-    uint16_t y = (uint16_t)area->y1;
-    uint16_t w = (uint16_t)(area->x2 - area->x1 + 1);
-    uint16_t h = (uint16_t)(area->y2 - area->y1 + 1);
-    unsigned int size = (unsigned int)w * h * sizeof(lv_color_t); /* RGB565 => 2B */
+    uint32_t size = (uint32_t)UI_SCREEN_W * UI_SCREEN_H * sizeof(lv_color_t); /* 150KB */
+    UI_UNUSED(area);
 
     if (s_flush_fn) {
-        s_flush_fn(x, y, w, h, (uint8_t *)color_p, size);
+        s_flush_fn((uint8_t *)color_p, size);
     }
 
     lv_disp_flush_ready(drv);
@@ -63,14 +75,19 @@ int ui_port_disp_init(ui_lcd_flush_fn flush_fn)
 {
     s_flush_fn = flush_fn ? flush_fn : default_flush;
 
+    /* 整帧缓冲：单/双缓冲由 UI_DISP_DOUBLE_BUF 控制 */
+#if UI_DISP_DOUBLE_BUF
     lv_disp_draw_buf_init(&s_draw_buf, s_buf1, s_buf2, UI_DISP_BUF_PIXELS);
+#else
+    lv_disp_draw_buf_init(&s_draw_buf, s_buf1, NULL, UI_DISP_BUF_PIXELS);
+#endif
 
     lv_disp_drv_init(&s_disp_drv);
-    s_disp_drv.draw_buf   = &s_draw_buf;
-    s_disp_drv.flush_cb   = disp_flush_cb;
-    s_disp_drv.hor_res    = UI_SCREEN_W;
-    s_disp_drv.ver_res    = UI_SCREEN_H;
-    s_disp_drv.full_refresh = 0;   /* 部分刷新，省内存 */
+    s_disp_drv.draw_buf = &s_draw_buf;
+    s_disp_drv.flush_cb = disp_flush_cb;
+    s_disp_drv.hor_res = UI_SCREEN_W;
+    s_disp_drv.ver_res = UI_SCREEN_H;
+    s_disp_drv.full_refresh = 1; /* 整屏刷新：flush_cb 每次拿到一整帧 */
     if (lv_disp_drv_register(&s_disp_drv) == NULL) {
         UI_LOGE("lv_disp_drv_register failed");
         return UI_ERR;
@@ -84,7 +101,8 @@ int ui_port_disp_init(ui_lcd_flush_fn flush_fn)
         return UI_ERR;
     }
 
-    UI_LOGI("ui_port disp init ok (%dx%d RGB565)", UI_SCREEN_W, UI_SCREEN_H);
+    UI_LOGI("ui_port disp init ok (%dx%d RGB565, full-frame, %s-buf)", UI_SCREEN_W, UI_SCREEN_H,
+            UI_DISP_DOUBLE_BUF ? "double" : "single");
     return UI_OK;
 }
 

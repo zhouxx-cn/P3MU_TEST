@@ -3,13 +3,13 @@
  * @brief   LVGL 移植层：显示 flush、tick、输入读取回调的对接点。
  *
  * @details
- *  这是 UI 与"具体硬件/平台"之间唯一的耦合点。样机阶段 flush 走 LCD 层的
- *  REFRESH_CALLBACK(x,y,w,h,rgb565,size)；迁移真机只改本文件的回调实现，
- *  上层 UI 完全不动。
+ *  这是 UI 与"具体硬件/平台"之间唯一的耦合点。显示采用【整帧送显】模式：
+ *  LVGL 把"视频底层 + 菜单浮层"合成成一整屏 240x320 RGB565，经 flush 回调
+ *  一次性送屏——匹配 IPC 模拟机底层接口 Lcd_SendFrame(pData, size)
+ *  （只接受一整张 RGB565）。迁移真机只改本文件的回调实现，上层 UI 完全不动。
  *
- *  - tick：由内部创建的高精度定时线程周期调用 lv_tick_inc()，
- *    对应 lv_conf.h 中 LV_TICK_CUSTOM=0。
- *  - flush：LVGL 渲染好的 RGB565 区域 → lcd 刷新回调。
+ *  - tick：由内部创建的定时线程周期调用 lv_tick_inc()，对应 LV_TICK_CUSTOM=0。
+ *  - flush：LVGL 渲染好的整帧 RGB565 → Lcd_SendFrame。
  */
 #ifndef __UI_PORT_H__
 #define __UI_PORT_H__
@@ -22,15 +22,15 @@ extern "C" {
 #endif
 
 /**
- * @brief LCD 刷新回调原型（与 DVR_SDK/LCD/lcd_layer.h 的 REFRESH_CALLBACK 一致）。
- * @param x,y   区域左上角
- * @param w,h   区域宽高
- * @param data  RGB565 像素，按行连续，每像素 2 字节
- * @param size  data 字节数（= w*h*2）
+ * @brief LCD 整帧送显回调原型（与 IPC 模拟机的 Lcd_SendFrame 一致）。
+ * @param pData 一整屏 RGB565 像素（240x320，按行连续，小端，每像素 2 字节）
+ * @param size  字节数（= 240*320*2 = 153600）
  * @return 0 成功
+ * @note  真机把它接到 Lcd_SendFrame(UINT8 *pData, UINT32 Size)。
+ *        若 Lcd_SendFrame 返回 void，用一个一行适配函数包一下即可，例如：
+ *          static int lcd_send(uint8_t *p, uint32_t n){ Lcd_SendFrame(p, n); return 0; }
  */
-typedef int (*ui_lcd_flush_fn)(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
-                               uint8_t *data, unsigned int size);
+typedef int (*ui_lcd_flush_fn)(uint8_t *pData, uint32_t size);
 
 /**
  * @brief 初始化显示移植层：注册 LVGL display driver + 启动 tick 线程。
