@@ -25,8 +25,8 @@
 #define USE_ALGO	(0)
 #define USE_VDA		(0)
 #else
-#define USE_ALGO	(1)
-#define USE_VDA		(1)
+#define USE_ALGO (0)
+#define USE_VDA (0)
 #endif
 #define USE_VISP	(0)
 

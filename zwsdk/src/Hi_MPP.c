@@ -3803,6 +3803,11 @@ SINT32 Hi_MPP_SetOSD(void *hChannelHandle, DEV_SUPPORT_SENSOR nSenIndex, ENCODE_
         return 0;
     }
 
+    if (eStm == SECOND_STREAM)
+    {
+        return 0;
+    }
+
     if (TIME_TYPE == eOsdType)
     {
         ps32OsdID = &pstStreamAttr->s32TimeOsdID;

@@ -462,6 +462,11 @@ void *UpdateOSDThread(void *lpParameter)
                         continue;
                     }
 
+                    if (i != FIRST_STREAM)
+                    {
+                        continue;
+                    }
+
 #if defined __ISP_IMAGE_DEBUG__
                     if (i != FIRST_STREAM)
                     {
