@@ -490,6 +490,82 @@ static int RecordCircleQueueReleaseData(unsigned int dwConnectionId, char *pBuff
 	return CircleQueue_ReleaseData(dwConnectionId,&stData);
 }
 
+//!\brief 子码流(AUX,240x320)循环缓冲区取数据：仅返回子码流视频帧的H264裸流(剥离28字节私有帧头)
+//!\param unsigned int dwConnectionId 连接ID
+//!\param char **pBuffer 输出: H264裸流起始(已跳过私有帧头)
+//!\param unsigned int *pLen 输出: H264裸流长度
+//!\return 0:成功 -1:异常 -2:缓冲区无数据 -3:非子码流视频帧(已释放)
+static int SubStreamCircleQueueGetData(unsigned int dwConnectionId, char **pBuffer, unsigned int *pLen)
+{
+	CQ_DATA_S stData;
+	int ret = 0;
+
+	if (NULL == pBuffer || NULL == pLen)
+	{
+		return -1;
+	}
+
+	ret = CircleQueue_GetData(dwConnectionId, &stData);
+	if (XRS_CQ_ERR_TAIL == ret)
+	{
+		//缓冲区无新数据
+		return -2;
+	}
+	if (0 != ret)
+	{
+		return -1;
+	}
+
+	//仅保留子码流(STREAM_TYPE_AUX)的视频帧(PktQCIFIFrames/PktQCIFPFrames)
+	if ((STREAM_TYPE_AUX != stData.s32Stream) ||
+		((PktQCIFIFrames != stData.s32FrameType) && (PktQCIFPFrames != stData.s32FrameType)))
+	{
+		CircleQueue_ReleaseData(dwConnectionId, &stData);
+		return -3;
+	}
+
+	//循环队列节点 = [28字节私有帧头 PRIVATEFRAMEHEADER] + [H264裸流]
+	if (stData.s32DataSize <= (int)sizeof(PRIVATEFRAMEHEADER))
+	{
+		CircleQueue_ReleaseData(dwConnectionId, &stData);
+		return -3;
+	}
+
+	//剥离私有帧头, 向上层返回纯 H264 裸流(释放时只按消费者句柄释放, 不依赖该指针)
+	*pBuffer = (char *)stData.pData + sizeof(PRIVATEFRAMEHEADER);
+	*pLen    = (unsigned int)(stData.s32DataSize - (int)sizeof(PRIVATEFRAMEHEADER));
+
+	return 0;
+}
+
+//!\brief 获取子码流(AUX,240x320)循环缓冲区消费接口(用法参考录像写卡 MemRecord)
+//!\param LPRecordInterface pInterface 输出: 取流回调集合
+//!\return 0 成功, -1 失败
+int CIU_GetSubStreamRecordInterface(LPRecordInterface pInterface)
+{
+	if (NULL == pInterface)
+	{
+		MPU_ERR("CIU_GetSubStreamRecordInterface pInterface is NULL\n");
+		return -1;
+	}
+
+	if (CQ_INVALID_HANDLE == g_CircleQueueHandler || 0 == g_CircleQueueHandler)
+	{
+		MPU_ERR("CIU_GetSubStreamRecordInterface CircleQueue not init!\n");
+		return -1;
+	}
+
+	//确保子码流编码器已开启, 使 240x320 子码流持续写入循环缓冲区
+	MPU_AVL_AuxCoder_Enable(0, 1);
+
+	pInterface->ifRecordUserAdd     = RecordCircleQueueAddUser;
+	pInterface->ifRecordUserDelete  = RecordCircleQueueDeleteUser;
+	pInterface->ifRecordGetData     = SubStreamCircleQueueGetData;
+	pInterface->ifRecordReleaseData = RecordCircleQueueReleaseData;
+
+	return 0;
+}
+
 //!\brief 设备向循环队列发送数据的回调函数
 //!\param int nCh 通道
 //!\param char *Buff 帧数据

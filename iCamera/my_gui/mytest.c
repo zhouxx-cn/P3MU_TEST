@@ -38,6 +38,7 @@
 #include "RNL/idvr_rnl.h"
 #include "mysystem.h"
 #include "tagLog.h"
+#include "thumbcam_demo.h"   /* 拇指相机 UI 接入 demo: 子码流H264 -> openh264 -> UI -> LCD */
 #include "CConfig.h"
 #include "INet.h"
 #include "base64Lib.h"
@@ -8411,8 +8412,6 @@ int CheckHostsConf(void)
 	return 0;
 }
 
-
-
 int main(void)
 {
     unsigned long cnt = 0;
@@ -8514,6 +8513,14 @@ int main(void)
         mysystem(command);
     }
 #endif
+
+    ZWSys_LCDSetBackLightLevel(100);
+
+    /* 启动拇指相机 UI demo:
+     * 从循环缓冲区取 240x320 子码流(H264) -> openh264 软解码(YUV)
+     * -> 对接 ui 工程师的 UI 框架(ui_video_refresh) -> 合成整帧 -> LCD 送显。
+     * 非阻塞, 内部自建 UI 线程与取流线程。 */
+    ThumbCamDemo_Start();
 
     while(1)
     {

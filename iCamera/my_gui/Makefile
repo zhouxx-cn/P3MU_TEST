@@ -216,6 +216,7 @@ INCLUDES=   -I../DVR_SDK \
             -I../DVR_SDK/ui/ui_menu/ \
             -I../DVR_SDK/ui/ui_common/ \
             -I../DVR_SDK/ui/ui_input/ \
+            -I../DVR_SDK/ThumbCamDemo/ \
             -I../modules/common 
 
 INCLUDES +=  -I../../baseline/$(BASELINE_INC)/mauth \
