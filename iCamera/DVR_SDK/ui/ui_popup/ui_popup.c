@@ -6,6 +6,7 @@
 #include "ui_res.h"
 #include "ui_theme.h"
 #include "ui_input.h"
+#include "ui_lang.h"
 #include "lvgl.h"
 
 static lv_obj_t     *s_layer = NULL;     /* 顶层父对象 */
@@ -141,7 +142,7 @@ void ui_popup_confirm(const char *title, ui_confirm_cb_t cb, void *user)
     lv_obj_set_style_pad_row(box, 10, 0);
 
     lb = lv_label_create(box);
-    lv_label_set_text(lb, title ? title : "确认操作?");
+    lv_label_set_text(lb, title ? title : ui_lang_tr(UI_STR_CONFIRM_TITLE));
     lv_label_set_long_mode(lb, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(lb, lv_pct(100));
     lv_obj_set_style_text_align(lb, LV_TEXT_ALIGN_CENTER, 0);
@@ -157,7 +158,7 @@ void ui_popup_confirm(const char *title, ui_confirm_cb_t cb, void *user)
     lv_obj_set_size(btn_no, 80, 32);
     ui_theme_apply_focusable(btn_no);
     l = lv_label_create(btn_no);
-    lv_label_set_text(l, UI_ICO_CLOSE " 取消");
+    lv_label_set_text_fmt(l, "%s %s", UI_ICO_CLOSE, ui_lang_tr(UI_STR_CANCEL));
     lv_obj_center(l);
     lv_obj_add_event_cb(btn_no, confirm_no_cb, LV_EVENT_CLICKED, NULL);
 
@@ -165,7 +166,7 @@ void ui_popup_confirm(const char *title, ui_confirm_cb_t cb, void *user)
     lv_obj_set_size(btn_yes, 80, 32);
     ui_theme_apply_focusable(btn_yes);
     l = lv_label_create(btn_yes);
-    lv_label_set_text(l, UI_ICO_OK " 确认");
+    lv_label_set_text_fmt(l, "%s %s", UI_ICO_OK, ui_lang_tr(UI_STR_CONFIRM_OK));
     lv_obj_center(l);
     lv_obj_add_event_cb(btn_yes, confirm_yes_cb, LV_EVENT_CLICKED, NULL);
 
@@ -201,7 +202,7 @@ void ui_popup_busy_show(const char *text)
     lv_obj_set_style_arc_color(spin, UI_COLOR_ACCENT, LV_PART_INDICATOR);
 
     lb = lv_label_create(s_busy);
-    lv_label_set_text(lb, text ? text : "处理中...");
+    lv_label_set_text(lb, text ? text : ui_lang_tr(UI_STR_PROCESSING));
     lv_obj_set_style_text_color(lb, UI_COLOR_TEXT, 0);
     lv_obj_align(lb, LV_ALIGN_CENTER, 0, 28);
 }

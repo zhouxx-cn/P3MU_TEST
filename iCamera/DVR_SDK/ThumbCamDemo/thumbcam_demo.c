@@ -38,6 +38,16 @@
 /* 海思 baseline 底层 LCD */
 #include "lcd.h"
 
+/* ======================= 物理按键(模拟 IPC 三键) =======================
+ * S1 呼叫键 / S2 挂断键 / S3 复位键。为避免引入过重的 Hi_MPP.h(会级联
+ * vi/vpss/venc 等平台头), 这里按 zwsdk 既有 C 接口自行声明读键函数。
+ * 语义(zwsdk defs.h KEY_STATUS_E): 返回 0 成功; 出参 0=按下(KEY_PUSH) 1=松开。
+ * 两接口为"电平读取"(非锁存), 轮询不会与一键呼叫业务争抢事件。 */
+extern int Hi_MPP_GetCallKeyStatus(int *pCallKeySt, int *pHangupKeySt);
+extern int Hi_MPP_GetRestKeyStatus(int *pResetKeySt);
+
+#define TC_KEY_PRESSED   0   /* KEY_PUSH: 0=按下 */
+
 #define TC_W (UI_PREVIEW_W)                /* 240 */
 #define TC_H (UI_PREVIEW_H)                /* 320 */
 #define TC_NV12_SIZE (TC_W * TC_H * 3 / 2) /* 115200 */
@@ -200,6 +210,36 @@ static void *tc_stream_thread(void *arg)
     return NULL;
 }
 
+/* ======================= 5) 物理按键扫描(UI 框架弱函数强实现) =======================
+ * 用户定义: S1/S2 做选择跳转(上/下), S3 做确认(OK)。
+ * 返回"当前按下"的单个逻辑键; 消抖与按下/抬起边沿由 ui_input_key.c 扫描线程统一处理。
+ * 本强实现覆盖 libui.a 中 ui_input_key.c 的 __attribute__((weak)) ui_key_scan_hw。 */
+ui_key_code_t ui_key_scan_hw(void)
+{
+    int call = 1, hangup = 1, reset = 1; /* 1=松开 */
+
+    /* S3 复位键 -> 确认(OK), 优先级最高 */
+    if (0 == Hi_MPP_GetRestKeyStatus(&reset) && TC_KEY_PRESSED == reset)
+    {
+        return UI_KEY_OK;
+    }
+
+    /* S1 呼叫键 -> 上(UP); S2 挂断键 -> 下(DOWN) */
+    if (0 == Hi_MPP_GetCallKeyStatus(&call, &hangup))
+    {
+        if (TC_KEY_PRESSED == call)
+        {
+            return UI_KEY_UP;
+        }
+        if (TC_KEY_PRESSED == hangup)
+        {
+            return UI_KEY_DOWN;
+        }
+    }
+
+    return UI_KEY_NONE;
+}
+
 /* ======================= 对外入口 ======================= */
 int ThumbCamDemo_Start(void)
 {
@@ -227,7 +267,8 @@ int ThumbCamDemo_Start(void)
     }
     ui_main_start();
 
-    /* 3) 启动物理按键源(样机弱实现, 无实体键时返回无键) */
+    /* 3) 启动物理按键源: 本文件强实现 ui_key_scan_hw() 读三键
+     *    S1->上(UP)  S2->下(DOWN)  S3->确认(OK); 扫描线程负责消抖与边沿 */
     ui_input_key_start();
 
     /* 4) 启动子码流取流 + 解码 + 送显线程 */

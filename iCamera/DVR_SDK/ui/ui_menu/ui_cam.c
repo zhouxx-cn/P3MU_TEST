@@ -5,6 +5,7 @@
 #include "ui_cam.h"
 #include "ui_msgq.h"
 #include "ui_popup.h"
+#include "ui_lang.h"
 
 static ui_work_mode_t s_mode = UI_MODE_RECORD;
 static int            s_recording = 0;
@@ -67,20 +68,20 @@ int ui_cam_toggle_record(void)
 {
     if (!s_recording) {
         if (s_ops.start_record && s_ops.start_record() != 0) {
-            ui_popup_toast("录像启动失败", 1500);
+            ui_popup_toast(ui_lang_tr(UI_STR_REC_FAIL), 1500);
             return UI_ERR;
         }
         s_recording = 1;
         s_rec_seconds = 0;
         biz_post(UI_BIZ_REC_STATE, 1, 0);
-        ui_popup_toast("开始录像", 1000);
+        ui_popup_toast(ui_lang_tr(UI_STR_REC_START), 1000);
     } else {
         if (s_ops.stop_record) {
             s_ops.stop_record();
         }
         s_recording = 0;
         biz_post(UI_BIZ_REC_STATE, 0, 0);
-        ui_popup_toast("录像已保存", 1200);
+        ui_popup_toast(ui_lang_tr(UI_STR_REC_SAVED), 1200);
     }
     return UI_OK;
 }
@@ -88,10 +89,10 @@ int ui_cam_toggle_record(void)
 int ui_cam_snap(void)
 {
     if (s_ops.take_photo && s_ops.take_photo() != 0) {
-        ui_popup_toast("拍照失败", 1200);
+        ui_popup_toast(ui_lang_tr(UI_STR_PHOTO_FAIL), 1200);
         return UI_ERR;
     }
-    ui_popup_toast("已保存照片", 1000);
+    ui_popup_toast(ui_lang_tr(UI_STR_PHOTO_SAVED), 1000);
     return UI_OK;
 }
 
@@ -99,19 +100,19 @@ int ui_cam_toggle_timelapse(int interval_sec)
 {
     if (!s_timelapse_on) {
         if (s_ops.start_timelapse && s_ops.start_timelapse(interval_sec) != 0) {
-            ui_popup_toast("延时启动失败", 1500);
+            ui_popup_toast(ui_lang_tr(UI_STR_TL_FAIL), 1500);
             return UI_ERR;
         }
         s_timelapse_on = 1;
         biz_post(UI_BIZ_REC_STATE, 1, 0);
-        ui_popup_toast("延时摄影中", 1000);
+        ui_popup_toast(ui_lang_tr(UI_STR_TL_RUNNING), 1000);
     } else {
         if (s_ops.stop_timelapse) {
             s_ops.stop_timelapse();
         }
         s_timelapse_on = 0;
         biz_post(UI_BIZ_REC_STATE, 0, 0);
-        ui_popup_toast("延时已保存", 1200);
+        ui_popup_toast(ui_lang_tr(UI_STR_TL_SAVED), 1200);
     }
     return UI_OK;
 }
@@ -131,7 +132,7 @@ void ui_cam_tick_1hz(void)
             }
             biz_post(UI_BIZ_SDCARD, s_free_minutes, s_free_minutes > 0 ? 1 : 2);
             if (s_free_minutes == 0) {
-                ui_popup_toast("存储已满", 1500);
+                ui_popup_toast(ui_lang_tr(UI_STR_SD_FULL), 1500);
                 if (s_recording) ui_cam_toggle_record();
                 if (s_timelapse_on) ui_cam_toggle_timelapse(0);
             }

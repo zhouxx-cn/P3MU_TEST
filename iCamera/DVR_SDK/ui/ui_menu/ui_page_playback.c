@@ -14,6 +14,7 @@
 #include "ui_theme.h"
 #include "ui_popup.h"
 #include "ui_cam.h"
+#include "ui_lang.h"
 #include <stdio.h>
 
 /** @brief 回放文件项。 */
@@ -68,7 +69,7 @@ static void on_delete_confirm(int confirmed, void *user)
     int idx = (int)(intptr_t)user;
     if (confirmed && s_src.remove) {
         s_src.remove(idx);
-        ui_popup_toast("已删除", 1000);
+        ui_popup_toast(ui_lang_tr(UI_STR_DELETED), 1000);
         /* 简化：删除后回菜单重进刷新（样机足够） */
         ui_page_pop();
     }
@@ -82,7 +83,7 @@ static void thumb_click_cb(lv_event_t *e)
     if (s_src.play) {
         s_src.play(idx);
     }
-    ui_popup_toast("播放中...", 1000);
+    ui_popup_toast(ui_lang_tr(UI_STR_PLAYING), 1000);
 }
 
 static void build_grid(ui_page_t *self)
@@ -143,7 +144,7 @@ static lv_obj_t *pb_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
 
     title = lv_label_create(root);
-    lv_label_set_text(title, UI_ICO_PLAYBACK "  回放");
+    lv_label_set_text_fmt(title, "%s  %s", UI_ICO_PLAYBACK, ui_lang_tr(UI_STR_PLAYBACK));
     lv_obj_set_style_text_font(title, UI_FONT_MEDIUM, 0);
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 8, UI_STATUSBAR_TOP_H + 4);
@@ -161,7 +162,7 @@ static lv_obj_t *pb_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_set_style_pad_column(s_grid, 6, 0);
 
     s_empty = lv_label_create(root);
-    lv_label_set_text(s_empty, "暂无文件");
+    lv_label_set_text(s_empty, ui_lang_tr(UI_STR_NO_FILES));
     lv_obj_set_style_text_color(s_empty, UI_COLOR_TEXT_DIM, 0);
     lv_obj_center(s_empty);
     lv_obj_add_flag(s_empty, LV_OBJ_FLAG_HIDDEN);

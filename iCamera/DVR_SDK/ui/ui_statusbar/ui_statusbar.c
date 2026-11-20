@@ -10,6 +10,7 @@
 #include "ui_statusbar.h"
 #include "ui_res.h"
 #include "ui_theme.h"
+#include "ui_lang.h"
 #include <stdio.h>
 
 /* 顶部控件 */
@@ -33,14 +34,20 @@ static int s_rec_on = 0;
 
 static const char *mode_text(ui_work_mode_t m)
 {
+    static char buf[48];
+    const char *ico = "";
+    ui_str_id_t id = UI_STR_REC;
+
     switch (m) {
-    case UI_MODE_RECORD:    return UI_ICO_REC " REC";
-    case UI_MODE_PHOTO:     return UI_ICO_PHOTO " PHOTO";
-    case UI_MODE_TIMELAPSE: return UI_ICO_TIMELAPSE " TL";
-    case UI_MODE_PLAYBACK:  return UI_ICO_PLAYBACK " PLAY";
-    case UI_MODE_SETTING:   return UI_ICO_SETTING " SET";
+    case UI_MODE_RECORD:    ico = UI_ICO_REC;       id = UI_STR_REC;       break;
+    case UI_MODE_PHOTO:     ico = UI_ICO_PHOTO;     id = UI_STR_PHOTO;     break;
+    case UI_MODE_TIMELAPSE: ico = UI_ICO_TIMELAPSE; id = UI_STR_TIMELAPSE; break;
+    case UI_MODE_PLAYBACK:  ico = UI_ICO_PLAYBACK;  id = UI_STR_PLAYBACK;  break;
+    case UI_MODE_SETTING:   ico = UI_ICO_SETTING;   id = UI_STR_SETTINGS;  break;
     default:                return "";
     }
+    snprintf(buf, sizeof(buf), "%s %s", ico, ui_lang_tr(id));
+    return buf;
 }
 
 /* 创建一个透明条，内部用 flex 横向排布 */

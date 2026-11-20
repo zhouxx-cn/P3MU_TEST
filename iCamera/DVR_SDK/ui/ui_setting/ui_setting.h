@@ -52,6 +52,7 @@ typedef struct {
     uint8_t         audio;         /**< 录音 0/1 */
     uint8_t         watermark;     /**< 时间水印 0/1 */
     uint8_t         wifi_on;       /**< WiFi 开关 0/1 */
+    int             language;      /**< UI 语言（ui_lang_id_t，随 save 持久化；choice 项用 int* 访问，须为 int） */
 } ui_settings_t;
 
 /** @brief 设置动作钩子（真机注入；样机用桩）。 */

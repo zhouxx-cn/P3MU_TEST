@@ -149,8 +149,13 @@
 #define LV_FONT_UNSCII_8                 0
 #define LV_FONT_UNSCII_16                0
 
-#define LV_FONT_CUSTOM_DECLARE
-#define LV_FONT_DEFAULT         &lv_font_montserrat_14
+/* 自研思源黑体裁剪字库（ui_font/，由 tools/font_gen.py 生成）。
+ * 经 LV_FONT_CUSTOM_DECLARE 在 lv_font.h 内声明，全 LVGL 可见 */
+#define LV_FONT_CUSTOM_DECLARE  LV_FONT_DECLARE(ui_font_sc_12) LV_FONT_DECLARE(ui_font_sc_14) \
+                                LV_FONT_DECLARE(ui_font_sc_16) LV_FONT_DECLARE(ui_font_sc_20)
+/* 默认字体切到中文字库（14px）：主题/未显式设置字体的标签直接可显中文；
+ * montserrat 12/14/16/20 保留，作为 LVGL symbol 图标的回退字体 */
+#define LV_FONT_DEFAULT         &ui_font_sc_14
 #define LV_FONT_FMT_TXT_LARGE   0
 #define LV_USE_FONT_COMPRESSED  0
 #define LV_USE_FONT_SUBPX       0

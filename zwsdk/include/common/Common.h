@@ -371,8 +371,8 @@
 #define AUX_STREAM_HEIGHT_MAX (320)
 #define MAX_FPS (20)
 #define ENC_MAIN_STREAM_BUF_SIZE (512 * 1024)
-#define MAIN_STREAM_VBR_MAX_BITRATE (1024)
-#define AUX_STREAM_VBR_MAX_BITRATE (512)
+#define MAIN_STREAM_VBR_MAX_BITRATE (2048)
+#define AUX_STREAM_VBR_MAX_BITRATE (1024)
 #endif
 
 #define 	MAX_MAIN_FPS				(30)
@@ -384,23 +384,16 @@
 #define     SLOWFRAME_GOP_RATIO         8
 
 //qp相关(需要保证min_iqp < min_qpvenc)
-#define     MAIN_STREAM_MAX_QP     		(51)
-#define     MAIN_STREAM_MAX_IQP     	(51)
-#define     AUX_STREAM_MAX_QP     		(51)
-#define     AUX_STREAM_MAX_IQP     	    (51)
-
+#define MAIN_STREAM_MAX_QP (45)
+#define MAIN_STREAM_MAX_IQP (45)
+#define AUX_STREAM_MAX_QP (45)
+#define AUX_STREAM_MAX_IQP (45)
 
 #if defined (__PRODUCT_P4__) || defined (__PRODUCT_P3MU__)||defined (__PRODUCT_P4U__)
-#define     MAIN_STREAM_MIN_QP     		(30)
-#define     MAIN_STREAM_MIN_IQP     	(29)
-#define     AUX_STREAM_MIN_QP     		(30)
-#define     AUX_STREAM_MIN_IQP     	    (29)
-#else
-#define     MAIN_STREAM_MIN_QP     		(32)
-#define     MAIN_STREAM_MIN_IQP     	(30)
-#define     AUX_STREAM_MIN_QP     		(31)
-#define     AUX_STREAM_MIN_IQP     	    (29)
-
+#define MAIN_STREAM_MIN_QP (21)
+#define MAIN_STREAM_MIN_IQP (20)
+#define AUX_STREAM_MIN_QP (21)
+#define AUX_STREAM_MIN_IQP (20)
 #endif
 
 //主子码流限制在4G移动卡下的minQP

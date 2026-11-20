@@ -15,6 +15,7 @@
 #include "ui_res.h"
 #include "ui_theme.h"
 #include "ui_menu.h"
+#include "ui_lang.h"
 #include <stdio.h>
 
 static ui_page_t s_page;
@@ -47,31 +48,34 @@ static void do_shutter_flash(void)
     lv_anim_start(&a);
 }
 
-/* 根据模式刷新中心/底部提示文案 */
+/* 根据模式刷新中心/底部提示文案（按键词固定，动作词随语言切换） */
 static void refresh_hint(void)
 {
     ui_work_mode_t m = ui_cam_mode();
+    char buf[64];
     const char *center = "";
-    const char *hint = "OK " LV_SYMBOL_BULLET " 录制    BACK " LV_SYMBOL_BULLET " 菜单";
+    ui_str_id_t act = UI_STR_REC;
 
     switch (m) {
     case UI_MODE_RECORD:
         center = "";
-        hint = "OK:录像  ▲▼:切模式  BACK:菜单";
+        act = UI_STR_REC;
         break;
     case UI_MODE_PHOTO:
         center = UI_ICO_PHOTO;
-        hint = "OK:拍照  ▲▼:切模式  BACK:菜单";
+        act = UI_STR_PHOTO;
         break;
     case UI_MODE_TIMELAPSE:
         center = UI_ICO_TIMELAPSE;
-        hint = "OK:延时  ▲▼:切模式  BACK:菜单";
+        act = UI_STR_ACT_TIMELAPSE;
         break;
     default:
         break;
     }
+    snprintf(buf, sizeof(buf), "OK:%s  ▲▼:%s  BACK:%s",
+             ui_lang_tr(act), ui_lang_tr(UI_STR_HINT_SWITCH), ui_lang_tr(UI_STR_HINT_MENU));
     if (s_center) lv_label_set_text(s_center, center);
-    if (s_hint)   lv_label_set_text(s_hint, hint);
+    if (s_hint)   lv_label_set_text(s_hint, buf);
 }
 
 /* 1Hz 定时器 */
@@ -105,8 +109,11 @@ static lv_obj_t *preview_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_align(s_tl_count, LV_ALIGN_CENTER, 0, -24);
     lv_obj_add_flag(s_tl_count, LV_OBJ_FLAG_HIDDEN);
 
-    /* 底部操作提示（在底部状态栏之上一点） */
+    /* 底部操作提示（在底部状态栏之上一点）；限宽换行，兼容长语言文案 */
     s_hint = lv_label_create(root);
+    lv_label_set_long_mode(s_hint, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(s_hint, UI_SCREEN_W);
+    lv_obj_set_style_text_align(s_hint, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(s_hint, UI_FONT_SMALL, 0);
     lv_obj_set_style_text_color(s_hint, UI_COLOR_TEXT_DIM, 0);
     lv_obj_align(s_hint, LV_ALIGN_BOTTOM_MID, 0, -(UI_STATUSBAR_BOT_H + 4));

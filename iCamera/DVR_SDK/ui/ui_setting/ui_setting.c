@@ -17,6 +17,7 @@
 #include "ui_popup.h"
 #include "ui_cam.h"
 #include "ui_msgq.h"
+#include "ui_lang.h"
 #include <stdio.h>
 
 static ui_page_t        s_page;
@@ -30,40 +31,57 @@ typedef enum { ITEM_TOGGLE, ITEM_CHOICE, ITEM_ACTION } item_kind_t;
 typedef enum { ACT_FORMAT, ACT_FACTORY, ACT_WIFI } action_id_t;
 
 typedef struct {
-    const char   *name;
+    ui_str_id_t   name_id;          /**< 左侧名称文案 ID */
     item_kind_t   kind;
     /* toggle: 指向 cfg 中的 uint8_t 字段；choice: 指向枚举字段 + 选项表；action: id */
     void         *field;
-    const char  **choices;
+    const ui_str_id_t *choices;    /**< choice 选项文案表（NULL 且 kind=CHOICE 表示"语言"项） */
     int           choice_cnt;
     action_id_t   action;
 } setting_item_t;
 
 static const char *res_choices[]  = { "2304x1296", "1920x1080", "1280x720" };
-static const char *flip_choices[] = { "关闭", "上下翻", "左右镜像", "旋转180" };
-static const char *ir_choices[]   = { "自动", "常开", "关闭" };
+static const ui_str_id_t flip_choices[] = {
+    UI_STR_DISABLED, UI_STR_FLIP_V, UI_STR_FLIP_H, UI_STR_FLIP_180
+};
+static const ui_str_id_t ir_choices[] = {
+    UI_STR_IR_AUTO, UI_STR_IR_ALWAYS, UI_STR_DISABLED
+};
 
 static setting_item_t s_items[] = {
-    { "分辨率",   ITEM_CHOICE, &s_cfg.resolution, res_choices,  3, 0 },
-    { "循环录像", ITEM_TOGGLE, &s_cfg.loop_record, NULL,        0, 0 },
-    { "WDR宽动态",ITEM_TOGGLE, &s_cfg.wdr,         NULL,        0, 0 },
-    { "画面翻转", ITEM_CHOICE, &s_cfg.flip,        flip_choices, 4, 0 },
-    { "红外夜视", ITEM_CHOICE, &s_cfg.ir,          ir_choices,   3, 0 },
-    { "录音",     ITEM_TOGGLE, &s_cfg.audio,       NULL,        0, 0 },
-    { "时间水印", ITEM_TOGGLE, &s_cfg.watermark,   NULL,        0, 0 },
-    { "WiFi",     ITEM_TOGGLE, &s_cfg.wifi_on,     NULL,        0, 0 },
-    { "WiFi配网", ITEM_ACTION, NULL,               NULL,        0, ACT_WIFI },
-    { "格式化",   ITEM_ACTION, NULL,               NULL,        0, ACT_FORMAT },
-    { "恢复出厂", ITEM_ACTION, NULL,               NULL,        0, ACT_FACTORY },
+    { UI_STR_RESOLUTION,   ITEM_CHOICE, &s_cfg.resolution, NULL,          3, 0 },
+    { UI_STR_LOOP_RECORD,  ITEM_TOGGLE, &s_cfg.loop_record, NULL,         0, 0 },
+    { UI_STR_WDR,          ITEM_TOGGLE, &s_cfg.wdr,         NULL,         0, 0 },
+    { UI_STR_FLIP,         ITEM_CHOICE, &s_cfg.flip,        flip_choices, 4, 0 },
+    { UI_STR_IR_NIGHT,     ITEM_CHOICE, &s_cfg.ir,          ir_choices,   3, 0 },
+    { UI_STR_MIC,          ITEM_TOGGLE, &s_cfg.audio,       NULL,         0, 0 },
+    { UI_STR_WATERMARK,    ITEM_TOGGLE, &s_cfg.watermark,   NULL,         0, 0 },
+    { UI_STR_WIFI,         ITEM_TOGGLE, &s_cfg.wifi_on,     NULL,         0, 0 },
+    { UI_STR_LANGUAGE,     ITEM_CHOICE, &s_cfg.language,    NULL,         UI_LANG_MAX, 0 },
+    { UI_STR_WIFI_SETUP,   ITEM_ACTION, NULL,               NULL,         0, ACT_WIFI },
+    { UI_STR_FORMAT,       ITEM_ACTION, NULL,               NULL,         0, ACT_FORMAT },
+    { UI_STR_FACTORY_RESET,ITEM_ACTION, NULL,               NULL,         0, ACT_FACTORY },
 };
 
 static lv_obj_t *s_rows[UI_ARRAY_SIZE(s_items)];
+static lv_obj_t *s_name_labels[UI_ARRAY_SIZE(s_items)];
 static lv_obj_t *s_vals[UI_ARRAY_SIZE(s_items)];
 
 void ui_setting_set_ops(const ui_settings_ops_t *ops)
 {
     if (ops) s_ops = *ops;
     else     memset(&s_ops, 0, sizeof(s_ops));
+}
+
+/* 刷新某行左侧名称（切语言时用） */
+static void refresh_names(void)
+{
+    unsigned i;
+    for (i = 0; i < UI_ARRAY_SIZE(s_items); i++) {
+        if (s_name_labels[i]) {
+            lv_label_set_text(s_name_labels[i], ui_lang_tr(s_items[i].name_id));
+        }
+    }
 }
 
 /* 刷新某行右侧值显示 */
@@ -75,13 +93,24 @@ static void refresh_value(int i)
 
     if (it->kind == ITEM_TOGGLE) {
         uint8_t on = *(uint8_t *)it->field;
-        lv_label_set_text(v, on ? UI_ICO_OK " 开" : "关");
+        if (on) {
+            lv_label_set_text_fmt(v, "%s %s", UI_ICO_OK, ui_lang_tr(UI_STR_ON));
+        } else {
+            lv_label_set_text(v, ui_lang_tr(UI_STR_OFF));
+        }
         lv_obj_set_style_text_color(v, on ? UI_COLOR_OK : UI_COLOR_TEXT_DIM, 0);
     } else if (it->kind == ITEM_CHOICE) {
-        int idx = *(int *)it->field;
-        idx = UI_CLAMP(idx, 0, it->choice_cnt - 1);
-        lv_label_set_text(v, it->choices[idx]);
-        lv_obj_set_style_text_color(v, UI_COLOR_ACCENT, 0);
+        int idx = UI_CLAMP(*(int *)it->field, 0, it->choice_cnt - 1);
+        if (it->field == &s_cfg.resolution) {
+            lv_label_set_text(v, res_choices[idx]);
+            lv_obj_set_style_text_color(v, UI_COLOR_ACCENT, 0);
+        } else if (it->field == &s_cfg.language) {
+            lv_label_set_text(v, ui_lang_name((ui_lang_id_t)idx));
+            lv_obj_set_style_text_color(v, UI_COLOR_ACCENT, 0);
+        } else {
+            lv_label_set_text(v, ui_lang_tr(it->choices[idx]));
+            lv_obj_set_style_text_color(v, UI_COLOR_ACCENT, 0);
+        }
     } else {
         lv_label_set_text(v, UI_ICO_RIGHT);
         lv_obj_set_style_text_color(v, UI_COLOR_TEXT_DIM, 0);
@@ -93,10 +122,10 @@ static void on_format_confirm(int ok, void *user)
 {
     UI_UNUSED(user);
     if (!ok) return;
-    ui_popup_busy_show("格式化中...");
+    ui_popup_busy_show(ui_lang_tr(UI_STR_FORMATTING));
     if (s_ops.format_storage) s_ops.format_storage();
     ui_popup_busy_hide();
-    ui_popup_toast("格式化完成", 1200);
+    ui_popup_toast(ui_lang_tr(UI_STR_FORMAT_DONE), 1200);
 }
 
 static void on_factory_confirm(int ok, void *user)
@@ -108,8 +137,11 @@ static void on_factory_confirm(int ok, void *user)
     memset(&s_cfg, 0, sizeof(s_cfg));
     s_cfg.resolution = UI_RES_2304x1296;
     s_cfg.audio = 1;
+    s_cfg.language = UI_LANG_ZH_CN;
+    ui_lang_set(UI_LANG_ZH_CN);
+    refresh_names();
     for (unsigned i = 0; i < UI_ARRAY_SIZE(s_items); i++) refresh_value(i);
-    ui_popup_toast("已恢复出厂设置", 1200);
+    ui_popup_toast(ui_lang_tr(UI_STR_FACTORY_DONE), 1200);
 }
 
 /* 执行动作项 */
@@ -117,14 +149,14 @@ static void do_action(action_id_t act)
 {
     switch (act) {
     case ACT_FORMAT:
-        ui_popup_confirm("确定格式化存储?\n所有文件将被删除", on_format_confirm, NULL);
+        ui_popup_confirm(ui_lang_tr(UI_STR_CONFIRM_FORMAT), on_format_confirm, NULL);
         break;
     case ACT_FACTORY:
-        ui_popup_confirm("确定恢复出厂设置?", on_factory_confirm, NULL);
+        ui_popup_confirm(ui_lang_tr(UI_STR_CONFIRM_FACTORY), on_factory_confirm, NULL);
         break;
     case ACT_WIFI:
         if (s_ops.wifi_config_start) s_ops.wifi_config_start();
-        ui_popup_toast("请用APP扫码配网", 1500);
+        ui_popup_toast(ui_lang_tr(UI_STR_SCAN_QR), 1500);
         break;
     default:
         break;
@@ -154,6 +186,11 @@ static void row_activate(int i)
         int *f = (int *)it->field;
         *f = (*f + 1) % it->choice_cnt;
         refresh_value(i);
+        if (it->field == &s_cfg.language) {
+            /* 切语言：立即生效并整页刷新名称/取值文案 */
+            ui_lang_set((ui_lang_id_t)s_cfg.language);
+            refresh_names();
+        }
         if (s_ops.apply) s_ops.apply(&s_cfg);
         break;
     }
@@ -174,7 +211,11 @@ static lv_obj_t *setting_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_t *root, *list, *title;
     unsigned i;
 
-    /* 载入设置（桩：用当前默认值） */
+    /* 行名/取值标签缓存清零（页面重入时重建） */
+    memset(s_name_labels, 0, sizeof(s_name_labels));
+    memset(s_vals, 0, sizeof(s_vals));
+
+    /* 载入设置（桩：用当前默认值）；语言随设置一并生效 */
     if (s_ops.load) {
         s_ops.load(&s_cfg);
     } else {
@@ -182,7 +223,9 @@ static lv_obj_t *setting_create(ui_page_t *self, lv_obj_t *parent)
         s_cfg.resolution = UI_RES_2304x1296;
         s_cfg.audio = 1;
         s_cfg.watermark = 1;
+        s_cfg.language = UI_LANG_ZH_CN;
     }
+    ui_lang_set((ui_lang_id_t)UI_CLAMP(s_cfg.language, 0, UI_LANG_MAX - 1));
 
     root = lv_obj_create(parent);
     lv_obj_remove_style_all(root);
@@ -192,7 +235,7 @@ static lv_obj_t *setting_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
 
     title = lv_label_create(root);
-    lv_label_set_text(title, UI_ICO_SETTING "  设置");
+    lv_label_set_text_fmt(title, "%s  %s", UI_ICO_SETTING, ui_lang_tr(UI_STR_SETTINGS));
     lv_obj_set_style_text_font(title, UI_FONT_MEDIUM, 0);
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 8, UI_STATUSBAR_TOP_H + 4);
@@ -219,7 +262,8 @@ static lv_obj_t *setting_create(ui_page_t *self, lv_obj_t *parent)
         lv_obj_set_style_pad_hor(row, 8, 0);
 
         lv_obj_t *nm = lv_label_create(row);
-        lv_label_set_text(nm, s_items[i].name);
+        lv_label_set_text(nm, ui_lang_tr(s_items[i].name_id));
+        s_name_labels[i] = nm;
 
         lv_obj_t *val = lv_label_create(row);
         s_vals[i] = val;

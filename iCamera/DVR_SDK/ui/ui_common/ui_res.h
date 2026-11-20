@@ -25,11 +25,13 @@ extern "C" {
 #define UI_COLOR_WARN        lv_color_hex(0xFFCC00)   /**< 警告 */
 #define UI_COLOR_MASK        lv_color_hex(0x000000)   /**< 遮罩 */
 
-/* ==================== 字体 ==================== */
-#define UI_FONT_SMALL        (&lv_font_montserrat_12)
-#define UI_FONT_NORMAL       (&lv_font_montserrat_14)
-#define UI_FONT_MEDIUM       (&lv_font_montserrat_16)
-#define UI_FONT_LARGE        (&lv_font_montserrat_20)
+/* ==================== 字体（思源黑体裁剪字库，见 ui_font/ui_font.h） ==================== */
+/* montserrat 12/14/16/20 仍编译，作为 LVGL symbol 图标的回退字体 */
+#include "ui_font.h"
+#define UI_FONT_SMALL        (&ui_font_sc_12)
+#define UI_FONT_NORMAL       (&ui_font_sc_14)
+#define UI_FONT_MEDIUM       (&ui_font_sc_16)
+#define UI_FONT_LARGE        (&ui_font_sc_20)
 
 /* ==================== 图标符号（LVGL 内置，轻量） ==================== */
 #define UI_ICO_REC           LV_SYMBOL_VIDEO

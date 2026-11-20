@@ -12,22 +12,23 @@
 #include "ui_cam.h"
 #include "ui_res.h"
 #include "ui_theme.h"
+#include "ui_lang.h"
 
 static ui_page_t s_page;
 
 typedef struct {
     const char     *icon;
-    const char     *text;
+    ui_str_id_t     str_id;   /* 多语言文案 ID */
     ui_work_mode_t  mode;     /* 对应模式；UI_MODE_MAX 表示非切模式项 */
     ui_page_id_t    page;     /* 需要跳转的页面；UI_PAGE_MAX 表示仅切模式回预览 */
 } menu_item_t;
 
 static const menu_item_t s_items[] = {
-    { UI_ICO_REC,       "录像",   UI_MODE_RECORD,    UI_PAGE_MAX      },
-    { UI_ICO_PHOTO,     "拍照",   UI_MODE_PHOTO,     UI_PAGE_MAX      },
-    { UI_ICO_TIMELAPSE, "延时摄影", UI_MODE_TIMELAPSE, UI_PAGE_MAX      },
-    { UI_ICO_PLAYBACK,  "回放",   UI_MODE_MAX,       UI_PAGE_PLAYBACK },
-    { UI_ICO_SETTING,   "设置",   UI_MODE_MAX,       UI_PAGE_SETTING  },
+    { UI_ICO_REC,       UI_STR_REC,       UI_MODE_RECORD,    UI_PAGE_MAX      },
+    { UI_ICO_PHOTO,     UI_STR_PHOTO,     UI_MODE_PHOTO,     UI_PAGE_MAX      },
+    { UI_ICO_TIMELAPSE, UI_STR_TIMELAPSE, UI_MODE_TIMELAPSE, UI_PAGE_MAX      },
+    { UI_ICO_PLAYBACK,  UI_STR_PLAYBACK,  UI_MODE_MAX,       UI_PAGE_PLAYBACK },
+    { UI_ICO_SETTING,   UI_STR_SETTINGS,  UI_MODE_MAX,       UI_PAGE_SETTING  },
 };
 
 static lv_obj_t *s_list_btns[UI_ARRAY_SIZE(s_items)];
@@ -83,7 +84,7 @@ static lv_obj_t *menu_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_clear_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
 
     title = lv_label_create(panel);
-    lv_label_set_text(title, "模式菜单");
+    lv_label_set_text(title, ui_lang_tr(UI_STR_MODE_MENU));
     lv_obj_set_style_text_font(title, UI_FONT_MEDIUM, 0);
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_set_style_pad_bottom(title, 4, 0);
@@ -97,7 +98,7 @@ static lv_obj_t *menu_create(ui_page_t *self, lv_obj_t *parent)
         ui_theme_apply_focusable(btn);
 
         lv_obj_t *lab = lv_label_create(btn);
-        lv_label_set_text_fmt(lab, "%s  %s", s_items[i].icon, s_items[i].text);
+        lv_label_set_text_fmt(lab, "%s  %s", s_items[i].icon, ui_lang_tr(s_items[i].str_id));
         lv_obj_center(lab);
 
         lv_obj_add_event_cb(btn, item_click_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);

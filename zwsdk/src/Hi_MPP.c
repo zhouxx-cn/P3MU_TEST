@@ -8927,7 +8927,6 @@ SINT32 Hi_MPP_GetCallKeyStatus(KEY_STATUS_E* eCallKeySt, KEY_STATUS_E* eHangupKe
         return -1;
     }
 
-#if defined (__PRODUCT_P3MU__)
     HALMOD_KEYCALL_ATTR_S stCallKey = {0};
 
     if (HalMod_Get_KeyCallAttr(0, &stCallKey) < 0)
@@ -8965,35 +8964,6 @@ SINT32 Hi_MPP_GetCallKeyStatus(KEY_STATUS_E* eCallKeySt, KEY_STATUS_E* eHangupKe
         return -1;
     }
     *eHangupKeySt = !stCallKey.Stat ? KEY_PUSH : KEY_RELE;
-
-    //临时调试使用
-    if (access("/tmp/keytest", F_OK) == 0) {
-        *eHangupKeySt = *eCallKeySt;
-    }
-#elif defined (__PRODUCT_P4U__)||defined (__PRODUCT_P4__)
-    HALMOD_KEYCALL_ATTR_S stCallKey = {0};
-
-    if ((RtVal = HalMod_Get_KeyCallAttr(0, &stCallKey)) < 0)
-    {
-        ZW_ERROR("HalMod_Close failed with %#x\n", RtVal);
-        return -1;
-    }
-
-    // 当按键按下时，Stat为0，松开时为1
-    *eCallKeySt = stCallKey.Stat ? KEY_PUSH : KEY_RELE;
-    *eHangupKeySt = *eCallKeySt;
-#else
-    HALMOD_DEF_KEY_ATTR_S stCallKey = {0};
-    if ((RtVal = HalMod_Get_KeyCallAttr(0, &stCallKey)) < 0)
-    {
-        ZW_ERROR("HalMod_Close failed with %#x\n", RtVal);
-        return -1;
-    }
-
-    // 当按键按下时，Stat为0，松开时为1
-    *eCallKeySt = stCallKey.Stat ? KEY_PUSH : KEY_RELE;
-    *eHangupKeySt = *eCallKeySt;
-#endif
 
     return RtVal;
 }

@@ -32,8 +32,8 @@ RM := rm -rf
 LIBUI       := libui.a
 INSTALL_DIR := ../lib_$(TYPE)-static/$(PRODUCT_TYPE)
 
-# ---- 8 个自研模块目录（源码隔离不变；不含 lvgl、不含示例）----
-UI_DIRS := ui_common ui_main ui_video ui_input ui_statusbar ui_menu ui_setting ui_popup
+# ---- 9 个自研模块目录（源码隔离不变；不含 lvgl、不含示例）----
+UI_DIRS := ui_common ui_font ui_main ui_video ui_input ui_statusbar ui_menu ui_setting ui_popup
 
 # ---- 头文件搜索路径：各模块 + LVGL 源码 + SDK(cJSON) ----
 INCLUDES := $(addprefix -I,$(UI_DIRS)) -Ilvgl -I../NET

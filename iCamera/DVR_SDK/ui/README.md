@@ -20,18 +20,25 @@
 
 ## 2. 目录结构与模块职责
 
-所有 UI 代码位于 `iCamera/DVR_SDK/ui/` 下（与 SDK 的 COM/NET/PAR/LCD 等模块平级）。源码按 8 个子模块目录隔离，**最终聚合成一个 `libui.a`**；第三方 LVGL 独立编成 `liblvgl.a`。
+所有 UI 代码位于 `iCamera/DVR_SDK/ui/` 下（与 SDK 的 COM/NET/PAR/LCD 等模块平级）。源码按 9 个子模块目录隔离，**最终聚合成一个 `libui.a`**；第三方 LVGL 独立编成 `liblvgl.a`。
 
 ```
 iCamera/DVR_SDK/ui/
-├── makefile              # 聚合构建：收集 8 个模块的 .o → 单个 libui.a；并驱动 lvgl 子构建
+├── makefile              # 聚合构建：收集 9 个模块的 .o → 单个 libui.a；并驱动 lvgl 子构建
 │
 ├── ui_common/            # 公共基础层：被所有模块依赖，零业务逻辑
-│   ├── lv_conf.h         #   LVGL 8.3 裁剪配置（240x320 / RGB565 / 自定义 tick / 小字体集）
+│   ├── lv_conf.h         #   LVGL 8.3 裁剪配置（240x320 / RGB565 / 自定义 tick / 中文字库默认字体）
 │   ├── ui_common.h       #   屏幕尺寸、通用宏、日志、返回码；统一包含头
 │   ├── ui_event.h        #   【统一事件契约】按键/点击/视频帧/业务状态 事件枚举+联合体
 │   ├── ui_theme.h/.c     #   LVGL style：面板/列表项/焦点高亮/文字 样式
-│   └── ui_res.h/.c       #   配色、字体、图标符号（LVGL 内置 symbol）集中管理
+│   ├── ui_res.h/.c       #   配色、字体、图标符号（LVGL 内置 symbol）集中管理
+│   └── ui_lang.h/.c      #   【多语言】11 种语言文案表 + ui_lang_tr() 翻译接口（文案唯一来源）
+│
+├── ui_font/              # 思源黑体裁剪字库（由 tools/font_gen.py 自动生成，勿手改）
+│   └── ui_font.h         #   ui_font_sc_12/14/16/20 声明；symbol 经 fallback 回退 montserrat
+│
+├── tools/                # 构建辅助工具
+│   └── font_gen.py       #   字库生成器：扫描 ui_lang.c 字符集 → 裁剪渲染 → LVGL C 字体
 │
 ├── ui_main/              # UI 入口与基础设施（唯一持有 LVGL 的线程）
 │   ├── ui_port.h/.c      #   移植层：tick 线程 + 显示 flush → LCD 回调（海思解耦点）
@@ -59,7 +66,7 @@ iCamera/DVR_SDK/ui/
 │   └── ui_page_playback.c    # 回放页：缩略图浏览/播放/删除（ui_pb_source_t 钩子）
 │
 ├── ui_setting/           # 参数设置页
-│   └── ui_setting.h/.c   #   分辨率/循环/WDR/翻转/红外/音频/水印/格式化/恢复出厂/WiFi
+│   └── ui_setting.h/.c   #   分辨率/循环/WDR/翻转/红外/音频/水印/语言/格式化/恢复出厂/WiFi
 │                         #   动作经 ui_settings_ops_t 钩子下发
 │
 ├── ui_popup/             # 弹窗层（最顶）
@@ -142,7 +149,7 @@ make echo  PRODUCT_TYPE=P3MU    # 打印收集到的源码/安装路径，便于
 
 | 产物 | 内容 | 体积 | 安装位置 |
 |---|---|---|---|
-| `libui.a` | 8 个模块 17 个 .o | ~87K | `lib_Hi3516CV608-static/P3MU/` |
+| `libui.a` | 9 个模块 22 个 .o（含 4 个字库） | ~293K | `lib_Hi3516CV608-static/P3MU/` |
 | `liblvgl.a` | LVGL 192 个 .o | ~741K | `lib_Hi3516CV608-static/P3MU/` |
 
 `my_gui/Makefile` 会自动 glob `lib_Hi3516CV608-static/P3MU/*.a` 并放进 `--start-group`，**无需改动 my_gui**。之后正常执行：
@@ -247,7 +254,57 @@ int (*)(uint8_t *pData, uint32_t size);   /* pData=整帧240x320 RGB565, size=15
 
 ---
 
-## 9. 业务与页面导航
+## 9. 多语言与中文字库（i18n）
+
+### 9.1 架构：文案唯一来源 + 表驱动翻译
+
+- **所有用户可见文案**（菜单/设置/toast/确认框/提示）统一收敛到 `ui_common/ui_lang.c` 的语言表，页面代码只写 `ui_lang_tr(UI_STR_XXX)`，**禁止再硬编码 UI 字符串**。
+- 支持 **11 种语言**：英语 / 简体中文（默认）/ 繁体中文 / 日语 / 俄语 / 泰语 / 越南语 / 德语 / 法语 / 意大利语 / 葡萄牙语。
+- 某语言未翻译的条目填 `NULL`，运行时自动回退英语；`ui_lang_tr()` 永不返回 NULL。
+- 语言切换入口：设置页新增 **"语言"** 项（选项用各自母语写法展示：English / 简体中文 / 繁體中文 / 日本語 / Русский / ไทย / Tiếng Việt / Deutsch / Français / Italiano / Português），切换后立即整页刷新名称与取值，并随设置持久化（`ui_settings_t.language`）。
+- 关键接口（`ui_common/ui_lang.h`）：
+
+```c
+const char  *ui_lang_tr(ui_str_id_t id);      /* 翻译：取当前语言文案 */
+void         ui_lang_set(ui_lang_id_t lang);  /* 切语言（须在 UI 线程调用） */
+ui_lang_id_t ui_lang_get(void);
+const char  *ui_lang_name(ui_lang_id_t lang); /* 语言自称（母语写法） */
+```
+
+### 9.2 中文字库：思源黑体裁剪生成
+
+**背景**：LVGL 内置 montserrat 只覆盖拉丁字符，中文显示为方块/空白——这是"中文不显示"的根因。现已引入思源黑体（SourceHanSansSC-Regular）裁剪字库。
+
+- 生成产物：`ui_font/ui_font_sc_12/14/16/20.c`（LVGL 原生 fmt_txt 格式，4bpp 抗锯齿），共约 156KB flash 占用。
+- **字符集自动收集**：生成脚本扫描 `ui_lang.c` 全部语言表的字符 + ASCII + 箭头/全角标点补充集，当前 477 字符。**改文案/加语言后必须重新生成字库**，否则新字符无字形。
+- **symbol 图标**：`LV_SYMBOL_*`（FontAwesome 私有区）不在中文字库内，各字库通过 `.fallback` 回退到同字号 `lv_font_montserrat_*` 渲染——因此 `lv_conf.h` 中 montserrat 12/14/16/20 **必须保持开启**。
+- 字体映射（`ui_res.h`）：`UI_FONT_SMALL=12 / NORMAL=14 / MEDIUM=16 / LARGE=20`；`LV_FONT_DEFAULT` 已切到 `&ui_font_sc_14`，主题/未显式指定字体的标签直接可显中文。
+- 重新生成字库：
+
+```bash
+pip3 install Pillow                      # 依赖（已验证 Pillow 9.0.1 / fontTools 可用）
+cd iCamera/DVR_SDK/ui
+python3 tools/font_gen.py <SourceHanSansSC-Regular.ttf路径>   # 默认输出 ui_font/
+make libui install PRODUCT_TYPE=P3MU
+```
+
+### 9.3 扩展新语言的步骤
+
+1. `ui_common/ui_lang.h`：在 `UI_LANG_MAX` 前加 `UI_LANG_XXX` 枚举；
+2. `ui_common/ui_lang.c`：新增 `ui_str_xxx[]` 表（**顺序与 `ui_str_id_t` 完全一致**，缺失条目填 `NULL`），并登记到 `s_tables[]` 和 `s_lang_names[]`；
+3. 需要用户切换的话，`s_lang_names[]` 已是选项表，无需改设置页；
+4. 重新运行 `tools/font_gen.py` 生成字库 → `make libui install`；
+5. 若新增了文案 ID，所有语言表同步补齐（暂时缺的填 NULL 自动回退英语）。
+
+### 9.4 已知限制
+
+- **泰语**：LVGL 8.3 无复杂文本整形（shaping），泰语元音/声调组合符无法精确上下定位，渲染为"基字符 + 组合符近似叠加"，可读但非出版级。需出版级效果需升级 LVGL 9.x（内置简化 shaping）或整行位图方案。
+- 越南语（预组合拉丁扩展）、俄语（西里尔）、日语（假名+汉字）均正常。
+- 字库当前覆盖"全部语言 UI 文案的实际字符"，不含任意汉字全集；显示新词前先跑 font_gen.py。
+
+---
+
+## 10. 业务与页面导航
 
 工作模式（`ui_work_mode_t`）：录像(默认)/拍照/延时摄影/回放/设置。
 
@@ -267,7 +324,7 @@ int (*)(uint8_t *pData, uint32_t size);   /* pData=整帧240x320 RGB565, size=15
 
 ---
 
-## 10. 注意事项 / 已知事项
+## 11. 注意事项 / 已知事项
 
 1. **LVGL 源码纳管**：`ui/lvgl/src` 含约 192 个第三方文件（~16M）。如不想纳入自有仓库，可在 `.gitignore` 忽略 `iCamera/DVR_SDK/ui/lvgl/`，改用 git submodule 或构建时拉取（当前是直接放入源码）。
 2. **LVGL 配置**：裁剪在 `ui_common/lv_conf.h`。编译时用 `-DLV_CONF_INCLUDE_SIMPLE` + `-Iui_common` 让 LVGL 找到它。调控件开关、字体、内存池大小都改这里。
@@ -277,7 +334,18 @@ int (*)(uint8_t *pData, uint32_t size);   /* pData=整帧240x320 RGB565, size=15
 
 ---
 
-## 11. 验证记录（2026-11-19）
+## 12. 验证记录
+
+### 2026-11-20（多语言 + 中文字库）
+
+- ✅ `libui.a`（22 objs / 9 模块, 293K, armv7）在 `-Wall -Wextra` 下零警告通过。
+- ✅ 思源黑体裁剪字库 4 个（12/14/16/20px, 477 字符, 4bpp）生成并编入 `libui.a`。
+- ✅ `LV_FONT_DEFAULT` 切换中文字库后 liblvgl.a 重新编译通过。
+- ✅ 模拟 `my_gui` 链接 `libui.a + liblvgl.a`（`--start-group`），**零未定义符号**，产出合法 ARM musl ELF。
+- ✅ 全部硬编码 UI 文案迁移至 `ui_lang.c`（脚本扫描确认：字符串字面量中文仅存在于 ui_lang.c）。
+- ✅ 字库垂直度量与 LVGL 绘制公式核对（`ofs_y = 字形底到基线距离`，对照 montserrat_14 '0'/'a'/'g' 实测数据）。
+
+### 2026-11-19（初版）
 
 - ✅ `liblvgl.a`（192 objs, 741K, armv7）交叉编译通过。
 - ✅ `libui.a`（17 objs / 8 模块, 87K, armv7）在 `-Wall -Wextra` 下零警告通过。
