@@ -31,27 +31,14 @@ typedef struct tagLogModule
 	char* name;
 }stLogModule;
 
-
-const static stLogModule g_LogModuleArray[] = 
-{
-	{LOG_MODULE_OPEN,	"[OPEN]"},
-	{LOG_MODULE_PUB,	"[PUB]"},
-	{LOG_MODULE_MAIN,	"[MAIN]"},
-    {LOG_MODULE_AVL,   	"[AVL]"},
-	{LOG_MODULE_4G,		"[4G]"},
-	{LOG_MODULE_NET,	"[NET]"},	
-	{LOG_MODULE_MPU,	"[MPU]"},	
-	{LOG_MODULE_ZWSDK,	"[ZWSDK]"},
-	{LOG_MODULE_JSONSYS,"[JSONSYS]"},
-	{LOG_MODULE_SD,     "[SD]"},
-    {LOG_MODULE_PTZ,    "[PTZ]"},
-    {LOG_MODULE_AUTH,   "[AUTH]"},
-    {LOG_MODULE_LIGHT,  "[LIGHT]"},
-    {LOG_MODULE_SYS,    "[SYS]"},
-    {LOG_MODULE_LCD,    "[LCD]"},
+const static stLogModule g_LogModuleArray[] = {
+    {LOG_MODULE_OPEN, "[OPEN]"},   {LOG_MODULE_PUB, "[PUB]"},     {LOG_MODULE_MAIN, "[MAIN]"},
+    {LOG_MODULE_AVL, "[AVL]"},     {LOG_MODULE_4G, "[4G]"},       {LOG_MODULE_NET, "[NET]"},
+    {LOG_MODULE_MPU, "[MPU]"},     {LOG_MODULE_ZWSDK, "[ZWSDK]"}, {LOG_MODULE_JSONSYS, "[JSONSYS]"},
+    {LOG_MODULE_SD, "[SD]"},       {LOG_MODULE_PTZ, "[PTZ]"},     {LOG_MODULE_AUTH, "[AUTH]"},
+    {LOG_MODULE_LIGHT, "[LIGHT]"}, {LOG_MODULE_SYS, "[SYS]"},     {LOG_MODULE_LCD, "[LCD]"},
+    {LOG_MODULE_UI, "[UI]"},
 };
-
-
 
 static unsigned int g_log_level     = DEBUG_LOG_LEVEL_INFO;
 static unsigned int g_module_status = LOG_MODULE_ALL;

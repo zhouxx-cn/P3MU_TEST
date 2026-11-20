@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include "ui_event.h"
+#include "LogManager.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,14 +49,11 @@ extern "C" {
 #endif
 
 #include <stdio.h>
-#define UI_LOGE(fmt, ...) fprintf(stderr, "[%s][E] " fmt "\n", UI_LOG_TAG, ##__VA_ARGS__)
-#define UI_LOGW(fmt, ...) fprintf(stderr, "[%s][W] " fmt "\n", UI_LOG_TAG, ##__VA_ARGS__)
-#define UI_LOGI(fmt, ...) fprintf(stdout, "[%s][I] " fmt "\n", UI_LOG_TAG, ##__VA_ARGS__)
-#ifdef UI_DEBUG
-#define UI_LOGD(fmt, ...) fprintf(stdout, "[%s][D] " fmt "\n", UI_LOG_TAG, ##__VA_ARGS__)
-#else
-#define UI_LOGD(fmt, ...) do {} while (0)
-#endif
+
+#define UI_LOGE(format...) LOG_W(LOG_MODULE_UI, format)
+#define UI_LOGW(format...) LOG_W(LOG_MODULE_UI, format)
+#define UI_LOGI(format...) LOG_W(LOG_MODULE_UI, format)
+#define UI_LOGD(format...) LOG_W(LOG_MODULE_UI, format)
 
 #ifdef __cplusplus
 }
