@@ -92,9 +92,12 @@ static void confirm_close(int confirmed)
         lv_group_del(s_confirm_group);
         s_confirm_group = NULL;
     }
-    /* 恢复之前页面的焦点组 */
+    /* 恢复之前页面的焦点组，并重新聚焦原对象（弹窗期间其焦点态被清除） */
     if (s_prev_group) {
         ui_input_set_group(s_prev_group);
+        if (s_prev_group->obj_focus) {
+            lv_group_focus_obj(*(s_prev_group->obj_focus));
+        }
         s_prev_group = NULL;
     }
     s_confirm_cb = NULL;
@@ -170,12 +173,14 @@ void ui_popup_confirm(const char *title, ui_confirm_cb_t cb, void *user)
     lv_obj_center(l);
     lv_obj_add_event_cb(btn_yes, confirm_yes_cb, LV_EVENT_CLICKED, NULL);
 
-    /* 为确认框建独立焦点组并接管输入；关闭后恢复 */
+    /* 为确认框建独立焦点组并接管输入；关闭后恢复页面焦点组。
+     * 必须保存当前组：关闭时本确认框的组会被删除，若不恢复，
+     * keypad indev 将指向已释放的组，按键全部失效（悬空指针）。 */
     s_confirm_group = lv_group_create();
     lv_group_add_obj(s_confirm_group, btn_no);
     lv_group_add_obj(s_confirm_group, btn_yes);
     lv_group_focus_obj(btn_no);
-    s_prev_group = NULL;   /* 由输入层当前组保存可选；样机关闭后由页面 on_show 重设 */
+    s_prev_group = ui_input_get_group();
     ui_input_set_group(s_confirm_group);
 }
 

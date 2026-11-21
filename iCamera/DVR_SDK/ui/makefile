@@ -35,8 +35,8 @@ INSTALL_DIR := ../lib_$(TYPE)-static/$(PRODUCT_TYPE)
 # ---- 9 个自研模块目录（源码隔离不变；不含 lvgl、不含示例）----
 UI_DIRS := ui_common ui_font ui_main ui_video ui_input ui_statusbar ui_menu ui_setting ui_popup
 
-# ---- 头文件搜索路径：各模块 + LVGL 源码 + SDK(cJSON) ----
-INCLUDES := $(addprefix -I,$(UI_DIRS)) -Ilvgl -I../NET -I../../modules/common/
+# ---- 头文件搜索路径：各模块 + LVGL 源码 ----
+INCLUDES := $(addprefix -I,$(UI_DIRS)) -Ilvgl -I../../modules/common/
 
 # ---- 编译标志（LV_CONF_INCLUDE_SIMPLE 让 LVGL 用 "lv_conf.h"，经 -Iui_common 命中）----
 CFLAGS := $(CPU_FLAGS) -Os -std=gnu11 -fno-strict-aliasing \

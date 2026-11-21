@@ -61,7 +61,7 @@ int ui_input_init(void)
         return UI_ERR;
     }
 
-    /* pointer（APP 模拟点击） */
+    /* pointer（触摸屏预留：真机触摸驱动投递 UI_EVT_POINT 后即生效） */
     lv_indev_drv_init(&s_pt_drv);
     s_pt_drv.type = LV_INDEV_TYPE_POINTER;
     s_pt_drv.read_cb = pointer_read_cb;
@@ -70,7 +70,7 @@ int ui_input_init(void)
         return UI_ERR;
     }
 
-    UI_LOGI("ui_input init ok (keypad+pointer)");
+    UI_LOGI("ui_input init ok (keypad + pointer[reserved for touch])");
     return UI_OK;
 }
 
@@ -87,6 +87,11 @@ void ui_input_set_group(lv_group_t *group)
     if (s_kp_indev && group) {
         lv_indev_set_group(s_kp_indev, group);
     }
+}
+
+lv_group_t *ui_input_get_group(void)
+{
+    return s_cur_group;
 }
 
 void ui_input_feed(const ui_event_t *evt)

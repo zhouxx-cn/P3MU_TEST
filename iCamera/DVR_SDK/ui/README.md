@@ -1,6 +1,6 @@
 # 拇指相机 UI 原型 —— 架构说明与使用教程
 
-> 面向后续 AI / 同事的上手文档。涵盖：这是什么、目录与职责、架构原理、编译方法、如何接入主程序、对外接口速查、移植到真机的改动点、APP 指令协议、注意事项。
+> 面向后续 AI / 同事的上手文档。涵盖：这是什么、目录与职责、架构原理、编译方法、如何接入主程序、对外接口速查、移植到真机的改动点、触摸屏接入预留、注意事项。
 
 ---
 
@@ -13,7 +13,7 @@
 - **码流**：IPC 两路码流——主码流 2304×1296（录像保存）、子码流 240×320（送 UI 层做实时预览背景）。
 - **交互**：本样机**无触摸屏**，两类输入统一封装：
   1. 物理按键（上/下/确认，共 3 键，无返回键）做焦点导航与模式切换；
-  2. APP 下发 JSON 网络指令，模拟屏幕点击坐标 / 按键，和物理按键复用同一套交互逻辑。
+  2. 触摸屏（真机预留）：pointer indev 已注册休眠，触摸驱动投递 UI_EVT_POINT 即生效，和物理按键复用同一套交互逻辑。
 - **设计目标**：严格模块化、低耦合、海思相关耦合全部收敛到少量钩子，**方便后续把 UI 代码整体迁移到真实拇指相机硬件**。
 
 ---
@@ -52,8 +52,8 @@ iCamera/DVR_SDK/ui/
 │
 ├── ui_input/             # 输入抽象层：屏蔽来源，向上只给 LVGL 事件
 │   ├── ui_input.h/.c         # 注册 keypad + pointer 两个 LVGL indev
-│   ├── ui_input_key.h/.c     # 源1：物理按键扫描（ui_key_scan_hw 弱函数，真机强实现）
-│   └── ui_input_app.c        # 源2：APP JSON 指令解析（复用 DVR_SDK/NET/cJSON）
+│   └── ui_input_key.h/.c     # 源1：物理按键扫描（ui_key_scan_hw 弱函数，真机强实现）
+│                             # 源2：触摸屏（预留）——驱动投递 UI_EVT_POINT 即生效
 │
 ├── ui_statusbar/         # 顶部/底部状态栏
 │   └── ui_statusbar.h/.c #   录制红点闪烁/时间/WiFi/电量/剩余容量/音频/防抖
@@ -95,10 +95,10 @@ iCamera/DVR_SDK/ui/
 ### 3.2 线程模型（严禁跨线程碰 LVGL）
 
 ```
- [按键扫描线程]  [APP 网络线程]   [IPC 子码流线程]   [业务上报线程]
+ [按键扫描线程]  [触摸屏驱动(预留)]  [IPC 子码流线程]   [业务上报线程]
         │              │                │                 │
-   ui_input_key_  ui_input_app_    ui_video_refresh   (biz 事件)
-     inject()       on_json()                              │
+   ui_input_key_  (投递 UI_EVT_     ui_video_refresh   (biz 事件)
+     inject()       POINT)                 │
         └──────────────┴────────┬───────┴─────────────────┘
                                  ▼
                      ui_msgq_post()  (线程安全环形队列)
@@ -117,9 +117,10 @@ iCamera/DVR_SDK/ui/
 
 `ui_input` 注册两个 LVGL indev：
 - **keypad indev**：上/下/确认 → `LV_KEY_PREV/NEXT/ENTER`，驱动焦点组导航；
-- **pointer indev**：APP 下发坐标 → 模拟触摸点击。
+- **pointer indev**：触摸坐标 → 点击/长按/拖动（**真机触摸屏预留**，样机无触摸硬件，注册后休眠）。
 
-物理按键和 APP 指令最终都变成同一套事件，**上层页面不区分来源**。
+> 样机阶段输入只有物理按键 3 键（上/下/确认）。APP JSON 模拟点击逻辑已移除
+> （原 `ui_input_app.c` 已删除，cJSON 依赖随之解除）；触摸屏真机接入方式见第 8 章。
 
 ---
 
@@ -182,8 +183,8 @@ ui_input_key_start();
 /* 3) IPC 子码流线程里，每来一帧 240x320 YUV 就推给 UI */
 ui_video_refresh(UI_PIX_NV12, yuv_buf, yuv_len, 240, 320, seq++);
 
-/* 4) APP 网络线程里，收到一行 JSON 指令就交给输入层 */
-ui_input_app_on_json("{\"type\":\"click\",\"x\":120,\"y\":200}");
+/* 4) 触摸屏（真机预留）：触摸驱动线程里把坐标/按下态投递 UI_EVT_POINT */
+/* 样机无触摸硬件，无需实现 */
 ```
 
 ---
@@ -219,7 +220,6 @@ int (*)(uint8_t *pData, uint32_t size);   /* pData=整帧240x320 RGB565, size=15
 |---|---|
 | `int ui_input_key_start(void)` / `ui_input_key_stop()` | 启停物理按键扫描线程 |
 | `void ui_input_key_inject(code, act)` | 直接注入一个逻辑按键（测试/复用） |
-| `int ui_input_app_on_json(const char *json)` | 解析一条 APP JSON 指令并投递 |
 
 ---
 
@@ -231,6 +231,7 @@ int (*)(uint8_t *pData, uint32_t size);   /* pData=整帧240x320 RGB565, size=15
 |---|---|---|---|
 | LCD 整帧送显 | `ui_main_cfg_t.lcd_flush` | 打印占位 | 接底层 `Lcd_SendFrame(pData,size)` |
 | 物理按键读取 | `ui_key_scan_hw()`（弱函数，`ui_input_key.c`） | 返回无键 | 读 GPIO/ADC 返回 `UI_KEY_*` |
+| 触摸屏 | pointer indev（`ui_input.c`，休眠） | 无触摸硬件 | 触摸驱动投递 `UI_EVT_POINT`（见第 8 章） |
 | YUV→RGB | `ui_video_set_yuv2rgb()` | 内置软转 | 海思 VGS/IVE 硬转 |
 | VDEC/VENC | `ui_video_set_codec()` | 无 | 录像/抓拍/延时接 SnapShot 及编码 |
 | 相机动作 | `ui_cam_set_ops()`（`ui_cam.h`） | 桩（仅改状态+toast） | 真实开始/停止录像、拍照等 |
@@ -239,18 +240,18 @@ int (*)(uint8_t *pData, uint32_t size);   /* pData=整帧240x320 RGB565, size=15
 
 ---
 
-## 8. APP JSON 指令协议
+## 8. 触摸屏接入（真机预留，样机无触摸硬件）
 
-由 APP 网络线程收到后调用 `ui_input_app_on_json()`：
+样机阶段输入仅物理按键 3 键；真机触摸屏按以下方式接入，**页面与抽象层零改动**：
 
-```jsonc
-{"type":"key","code":"up|down|ok","act":"press|release"}  // 模拟按键（3 键布局，无 back）；act 省略=按下+抬起
-{"type":"click","x":120,"y":200}      // 一次完整点击（按下+抬起）
-{"type":"press","x":120,"y":200}      // 仅按下
-{"type":"release","x":120,"y":200}    // 仅抬起
-```
+1. `ui_input.c` 已注册 **pointer indev**（当前休眠，坐标 0,0 / 抬起态）；
+2. 触摸驱动线程读到坐标/按下态后，经 `ui_msgq_post()` 投递 `UI_EVT_POINT` 事件
+   （`evt.u.point = {x, y, pressed}`，坐标范围 0~239 / 0~319，原点左上）；
+3. UI 线程 `ui_input_feed()` 自动把事件喂给 pointer indev，
+   LVGL 即识别点击/长按/拖动，已有页面的按钮/列表/弹窗天然可点。
 
-坐标系：原点左上，单位像素，范围 0~239 / 0~319（内部会 clamp）。
+> 原样机用 APP JSON 模拟触摸/按键的逻辑（`ui_input_app.c`）已删除，
+> cJSON 依赖随之解除；真机如需远程调试注入，可按 `UI_EVT_KEY/POINT` 事件结构自行接回。
 
 ---
 
@@ -323,7 +324,7 @@ make libui install PRODUCT_TYPE=P3MU
 
 - 预览页 ▲▼ 在全部 5 个模式间循环：切到"回放/设置"时自动进入对应页面；页面内 UP/DOWN/OK 走 LVGL 焦点组导航。
 - **页面退出**：无实体返回键，统一用屏幕右上角"返回"按钮（设置页/回放页），点击后 `ui_cam_mode_back()` 恢复进入前的拍摄模式并回预览。
-- 模式菜单页 (MENU) 保留注册，供 APP 模拟点击进入；3 键下由选中项退出。
+- 模式菜单页 (MENU) 保留注册（当前 3 键布局下无入口，页面与钩子保留备用）；选中项即退出。
 - 预览页 1Hz 定时器驱动 `ui_cam_tick_1hz()`：累加录制时长、递减剩余容量、广播给状态栏。
 
 ---
@@ -340,9 +341,21 @@ make libui install PRODUCT_TYPE=P3MU
 
 ## 12. 验证记录
 
+### 2026-11-21（修复确认弹窗关闭后按键失效）
+
+- ✅ 根因：确认框关闭时删除了自己的焦点组，但 keypad indev 未恢复页面组 → 悬空指针，按键全失效。
+- ✅ 修复：`ui_popup_confirm()` 打开时保存当前组（新增 `ui_input_get_group()`），关闭时恢复并重新聚焦原对象。
+
+### 2026-11-21（移除 APP JSON 输入，预留触摸屏）
+
+- ✅ 删除 `ui_input_app.c`（JSON 模拟点击/按键解析整体移除，cJSON 依赖解除，libui 不再链接 cJSON）。
+- ✅ pointer indev 保留并休眠，作为真机触摸屏接入点：触摸驱动投递 `UI_EVT_POINT` 即生效，页面零改动（README 第 8 章）。
+- ✅ `ui_integration_example.c` 示例同步改为触摸预留写法。
+- ✅ `libui.a` 重建 + 链接自检通过（my_gui 无 `ui_input_app_on_json` 调用点，无需改动主程序）。
+
 ### 2026-11-21（3 键布局改造）
 
-- ✅ 删除 `UI_KEY_BACK`（框架、按键映射、APP 指令映射、各页面 BACK 拦截全部清理，零残留引用）。
+- ✅ 删除 `UI_KEY_BACK`（框架、按键映射、各页面 BACK 拦截全部清理，零残留引用）。
 - ✅ 预览页 ▲▼ 循环切换全部 5 个模式（录像/拍照/延时/回放/设置），切到回放/设置自动进页。
 - ✅ 设置页/回放页新增屏幕"返回"按钮（`UI_ICO_LEFT` + 多语言文案，焦点组内可达）。
 - ✅ 新增 `ui_cam_mode_back()`：退出回放/设置时恢复进入前的拍摄模式。
@@ -363,5 +376,5 @@ make libui install PRODUCT_TYPE=P3MU
 - ✅ `liblvgl.a`（192 objs, 741K, armv7）交叉编译通过。
 - ✅ `libui.a`（17 objs / 8 模块, 87K, armv7）在 `-Wall -Wextra` 下零警告通过。
 - ✅ 模拟 `my_gui` 主程序将 `libui.a + liblvgl.a` 以 `--start-group` 链接，**零未定义符号**，产出合法 ARM musl 可执行文件——自研 UI ↔ 真实 LVGL 8.3 全栈打通。
-- ✅ 关键符号 `ui_main_init / ui_video_refresh / ui_input_app_on_json / ui_page_push` 正确导出。
+- ✅ 关键符号 `ui_main_init / ui_video_refresh / ui_page_push` 正确导出。
 ```
