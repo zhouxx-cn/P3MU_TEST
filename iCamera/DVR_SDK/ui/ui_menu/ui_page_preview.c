@@ -69,11 +69,11 @@ static void refresh_hint(void)
         center = UI_ICO_TIMELAPSE;
         act = UI_STR_ACT_TIMELAPSE;
         break;
-    default:
+    default:    /* 回放/设置模式会立刻切页，预览页不展示 */
         break;
     }
-    snprintf(buf, sizeof(buf), "OK:%s  ▲▼:%s  BACK:%s",
-             ui_lang_tr(act), ui_lang_tr(UI_STR_HINT_SWITCH), ui_lang_tr(UI_STR_HINT_MENU));
+    snprintf(buf, sizeof(buf), "OK:%s  ▲▼:%s",
+             ui_lang_tr(act), ui_lang_tr(UI_STR_HINT_SWITCH));
     if (s_center) lv_label_set_text(s_center, center);
     if (s_hint)   lv_label_set_text(s_hint, buf);
 }
@@ -174,30 +174,31 @@ static int preview_on_event(ui_page_t *self, const ui_event_t *evt)
         return 1;
 
     case UI_KEY_UP:
-        /* 向前切换可用拍摄模式（录像↔拍照↔延时循环） */
-        {
-            int m = (int)ui_cam_mode();
-            m = (m + UI_MODE_TIMELAPSE) % (UI_MODE_TIMELAPSE + 1); /* -1 回绕 */
-            ui_cam_set_mode((ui_work_mode_t)m);
-            refresh_hint();
-        }
-        return 1;
-
     case UI_KEY_DOWN:
+        /* 3 键布局：上/下（左/右）键循环切换全部 5 个模式；
+         * 切到回放/设置时直接进入对应页面，返回时由"返回"按钮恢复拍摄模式 */
         {
-            int m = (int)ui_cam_mode();
-            m = (m + 1) % (UI_MODE_TIMELAPSE + 1);
-            ui_cam_set_mode((ui_work_mode_t)m);
-            refresh_hint();
-        }
-        return 1;
+            int dir  = (evt->u.key.code == UI_KEY_DOWN) ? 1 : -1;
+            int base = (int)UI_MODE_RECORD;
+            int cnt  = (int)UI_MODE_MAX;
+            int m    = (int)ui_cam_mode() - base;
+            ui_work_mode_t next;
 
-    case UI_KEY_BACK:
-        /* 录制中不允许直接进菜单，先提示 */
-        if (ui_cam_is_recording()) {
-            return 1;
+            if (m < 0 || m >= cnt) {
+                m = 0;   /* 当前不在合法模式（理论不发生），兜底 */
+            }
+            m = (m + dir + cnt) % cnt;
+            next = (ui_work_mode_t)(base + m);
+
+            ui_cam_set_mode(next);
+            if (next == UI_MODE_PLAYBACK) {
+                ui_page_push(UI_PAGE_PLAYBACK);
+            } else if (next == UI_MODE_SETTING) {
+                ui_page_push(UI_PAGE_SETTING);
+            } else {
+                refresh_hint();
+            }
         }
-        ui_page_push(UI_PAGE_MENU);
         return 1;
 
     default:

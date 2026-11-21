@@ -125,14 +125,10 @@ static void menu_on_show(ui_page_t *self)
 
 static int menu_on_event(ui_page_t *self, const ui_event_t *evt)
 {
+    /* 3 键布局：UP/DOWN/OK 由 LVGL keypad+group 自动处理焦点与点击，
+     * 无实体返回键；选中某项即离开本页（切模式回预览或进入子页）。 */
     UI_UNUSED(self);
-    /* UP/DOWN/OK 由 LVGL keypad+group 自动处理焦点与点击；
-     * 这里只拦截 BACK 返回预览。 */
-    if (evt->type == UI_EVT_KEY && evt->u.key.act == UI_KEY_ACT_PRESS &&
-        evt->u.key.code == UI_KEY_BACK) {
-        ui_page_pop();
-        return 1;
-    }
+    UI_UNUSED(evt);
     return 0;
 }
 

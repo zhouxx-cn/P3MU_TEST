@@ -25,8 +25,7 @@ static ui_key_code_t str_to_key(const char *s)
     if (strcasecmp(s, "down") == 0) return UI_KEY_DOWN;
     if (strcasecmp(s, "ok")   == 0) return UI_KEY_OK;
     if (strcasecmp(s, "enter")== 0) return UI_KEY_OK;
-    if (strcasecmp(s, "back") == 0) return UI_KEY_BACK;
-    return UI_KEY_NONE;
+    return UI_KEY_NONE;    /* 3 键布局：无返回键，APP 下发 back 也忽略 */
 }
 
 static void post_point(int x, int y, int pressed)

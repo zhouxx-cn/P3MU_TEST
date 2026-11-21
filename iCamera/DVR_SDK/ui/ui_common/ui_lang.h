@@ -97,7 +97,7 @@ typedef enum {
     UI_STR_PROCESSING,        /**< 处理中... */
     UI_STR_ACT_TIMELAPSE,     /**< 延时（预览页提示短词） */
     UI_STR_HINT_SWITCH,       /**< 切模式 */
-    UI_STR_HINT_MENU,         /**< 菜单 */
+    UI_STR_BACK,              /**< 返回（屏幕返回按钮，3 键布局无实体返回键） */
     UI_STR_MAX,
 } ui_str_id_t;
 

@@ -132,9 +132,17 @@ static void build_grid(ui_page_t *self)
     }
 }
 
+/* 屏幕返回按钮（3 键布局无实体返回键）：恢复拍摄模式并回预览 */
+static void pb_back_cb(lv_event_t *e)
+{
+    UI_UNUSED(e);
+    ui_cam_mode_back();
+    ui_page_pop();
+}
+
 static lv_obj_t *pb_create(ui_page_t *self, lv_obj_t *parent)
 {
-    lv_obj_t *root, *title;
+    lv_obj_t *root, *title, *back, *back_lab;
 
     root = lv_obj_create(parent);
     lv_obj_remove_style_all(root);
@@ -148,6 +156,22 @@ static lv_obj_t *pb_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_set_style_text_font(title, UI_FONT_MEDIUM, 0);
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 8, UI_STATUSBAR_TOP_H + 4);
+
+    /* 屏幕返回按钮（标题右侧；焦点组内加入顺序在缩略图之后，见 pb_on_show） */
+    back = lv_btn_create(root);
+    lv_obj_remove_style_all(back);
+    lv_obj_set_size(back, 64, 26);
+    ui_theme_apply_focusable(back);
+    lv_obj_set_style_bg_color(back, UI_COLOR_PANEL, 0);
+    lv_obj_set_style_bg_opa(back, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(back, 6, 0);
+    lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -8, UI_STATUSBAR_TOP_H + 2);
+    lv_obj_add_event_cb(back, pb_back_cb, LV_EVENT_CLICKED, NULL);
+
+    back_lab = lv_label_create(back);
+    lv_label_set_text_fmt(back_lab, "%s %s", UI_ICO_LEFT, ui_lang_tr(UI_STR_BACK));
+    lv_obj_center(back_lab);
+    self->priv = back;        /* 供 on_show 在网格之后追加进焦点组 */
 
     /* 缩略图网格（两列） */
     s_grid = lv_obj_create(root);
@@ -177,19 +201,17 @@ static lv_obj_t *pb_create(ui_page_t *self, lv_obj_t *parent)
 static void pb_on_show(ui_page_t *self)
 {
     build_grid(self);
+    /* 返回按钮在缩略图之后进入焦点组：DOWN 循环到最后可到达 */
+    if (self->priv) {
+        lv_group_add_obj(self->group, (lv_obj_t *)self->priv);
+    }
 }
 
 static int pb_on_event(ui_page_t *self, const ui_event_t *evt)
 {
     UI_UNUSED(self);
-    if (evt->type == UI_EVT_KEY && evt->u.key.act == UI_KEY_ACT_PRESS) {
-        if (evt->u.key.code == UI_KEY_BACK) {
-            ui_cam_set_mode(UI_MODE_RECORD);
-            ui_page_pop();
-            return 1;
-        }
-    }
-    return 0;
+    UI_UNUSED(evt);
+    return 0;   /* 3 键布局：UP/DOWN/OK 由焦点组处理，退出走屏幕"返回"按钮 */
 }
 
 void ui_page_playback_register(void)

@@ -8,6 +8,7 @@
 #include "ui_lang.h"
 
 static ui_work_mode_t s_mode = UI_MODE_RECORD;
+static ui_work_mode_t s_last_shoot_mode = UI_MODE_RECORD;  /* 进入回放/设置前的拍摄模式 */
 static int            s_recording = 0;
 static int            s_timelapse_on = 0;
 static int            s_rec_seconds = 0;
@@ -47,10 +48,22 @@ void ui_cam_set_ops(const ui_cam_ops_t *ops)
 ui_work_mode_t ui_cam_mode(void) { return s_mode; }
 int ui_cam_is_recording(void)    { return s_recording; }
 
+void ui_cam_mode_back(void)
+{
+    /* 从回放/设置页退出：恢复进入前的拍摄模式 */
+    ui_cam_set_mode(s_last_shoot_mode);
+}
+
 void ui_cam_set_mode(ui_work_mode_t mode)
 {
     if (mode >= UI_MODE_MAX || mode == s_mode) {
         return;
+    }
+    /* 进入回放/设置页前记住拍摄模式，退出时用 ui_cam_mode_back() 恢复 */
+    if (mode == UI_MODE_PLAYBACK || mode == UI_MODE_SETTING) {
+        if (s_mode <= UI_MODE_TIMELAPSE) {
+            s_last_shoot_mode = s_mode;
+        }
     }
     /* 切模式前若在录制/延时，先停 */
     if (s_recording) {

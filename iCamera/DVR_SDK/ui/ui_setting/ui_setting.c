@@ -206,9 +206,20 @@ static void row_click_cb(lv_event_t *e)
     row_activate(i);
 }
 
+/* 屏幕返回按钮（3 键布局无实体返回键）：保存设置并回到预览 */
+static void back_btn_cb(lv_event_t *e)
+{
+    UI_UNUSED(e);
+    if (s_ops.save) {
+        s_ops.save(&s_cfg);
+    }
+    ui_cam_mode_back();
+    ui_page_pop();
+}
+
 static lv_obj_t *setting_create(ui_page_t *self, lv_obj_t *parent)
 {
-    lv_obj_t *root, *list, *title;
+    lv_obj_t *root, *list, *title, *back, *back_lab;
     unsigned i;
 
     /* 行名/取值标签缓存清零（页面重入时重建） */
@@ -239,6 +250,21 @@ static lv_obj_t *setting_create(ui_page_t *self, lv_obj_t *parent)
     lv_obj_set_style_text_font(title, UI_FONT_MEDIUM, 0);
     lv_obj_set_style_text_color(title, UI_COLOR_TEXT, 0);
     lv_obj_align(title, LV_ALIGN_TOP_LEFT, 8, UI_STATUSBAR_TOP_H + 4);
+
+    /* 屏幕返回按钮（标题右侧；键盘组内排在所有设置行之后） */
+    back = lv_btn_create(root);
+    lv_obj_remove_style_all(back);
+    lv_obj_set_size(back, 64, 26);
+    ui_theme_apply_focusable(back);
+    lv_obj_set_style_bg_color(back, UI_COLOR_PANEL, 0);
+    lv_obj_set_style_bg_opa(back, LV_OPA_COVER, 0);
+    lv_obj_set_style_radius(back, 6, 0);
+    lv_obj_align(back, LV_ALIGN_TOP_RIGHT, -8, UI_STATUSBAR_TOP_H + 2);
+    lv_obj_add_event_cb(back, back_btn_cb, LV_EVENT_CLICKED, NULL);
+
+    back_lab = lv_label_create(back);
+    lv_label_set_text_fmt(back_lab, "%s %s", UI_ICO_LEFT, ui_lang_tr(UI_STR_BACK));
+    lv_obj_center(back_lab);
 
     /* 可滚动设置列表 */
     list = lv_obj_create(root);
@@ -274,20 +300,10 @@ static lv_obj_t *setting_create(ui_page_t *self, lv_obj_t *parent)
         s_rows[i] = row;
     }
 
-    return root;
-}
+    /* 返回按钮最后加入焦点组：DOWN 到列表末尾可到达，OK 触发返回 */
+    lv_group_add_obj(self->group, back);
 
-static int setting_on_event(ui_page_t *self, const ui_event_t *evt)
-{
-    UI_UNUSED(self);
-    if (evt->type == UI_EVT_KEY && evt->u.key.act == UI_KEY_ACT_PRESS &&
-        evt->u.key.code == UI_KEY_BACK) {
-        if (s_ops.save) s_ops.save(&s_cfg);
-        ui_cam_set_mode(UI_MODE_RECORD);
-        ui_page_pop();
-        return 1;
-    }
-    return 0;
+    return root;
 }
 
 void ui_page_setting_register(void)
@@ -296,6 +312,6 @@ void ui_page_setting_register(void)
     s_page.id       = UI_PAGE_SETTING;
     s_page.name     = "setting";
     s_page.create   = setting_create;
-    s_page.on_event = setting_on_event;
+    s_page.on_event = NULL;   /* 3 键布局：无返回键，退出走屏幕"返回"按钮 */
     ui_page_register(&s_page);
 }

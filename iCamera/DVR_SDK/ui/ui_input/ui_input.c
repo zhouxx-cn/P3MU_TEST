@@ -30,7 +30,6 @@ static uint32_t map_key(ui_key_code_t code)
     case UI_KEY_UP:   return LV_KEY_PREV;   /* 上：焦点上一个 */
     case UI_KEY_DOWN: return LV_KEY_NEXT;   /* 下：焦点下一个 */
     case UI_KEY_OK:   return LV_KEY_ENTER;  /* 确认 */
-    case UI_KEY_BACK: return LV_KEY_ESC;    /* 返回 */
     default:          return 0;
     }
 }

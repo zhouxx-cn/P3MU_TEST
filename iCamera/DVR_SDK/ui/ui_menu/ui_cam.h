@@ -39,6 +39,11 @@ ui_work_mode_t ui_cam_mode(void);
 /** @brief 切换工作模式（同时广播 UI_BIZ_MODE 给状态栏）。 */
 void ui_cam_set_mode(ui_work_mode_t mode);
 
+/**
+ * @brief 从回放/设置页退出：恢复进入前的拍摄模式（3 键布局无返回键时的统一出口）。
+ */
+void ui_cam_mode_back(void);
+
 /** @brief 是否正在录制。 */
 int ui_cam_is_recording(void);
 

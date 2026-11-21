@@ -44,13 +44,16 @@ static int page_lazy_create(ui_page_t *p)
     if (!p->create) {
         return UI_ERR_STATE;
     }
+    /* 必须先建焦点组再创建页面对象：页面 create 内会把可聚焦控件
+     * 加入 self->group，若此时组还是 NULL，LVGL 会静默丢弃导致按键全无响应 */
+    p->group = lv_group_create();
     p->root = p->create(p, s_content_layer);
     if (!p->root) {
+        lv_group_del(p->group);
+        p->group = NULL;
         UI_LOGE("page[%s] create failed", p->name ? p->name : "?");
         return UI_ERR;
     }
-    /* 每页一个焦点组，切页时切换输入组 */
-    p->group = lv_group_create();
     lv_obj_add_flag(p->root, LV_OBJ_FLAG_HIDDEN);
     return UI_OK;
 }
@@ -60,6 +63,11 @@ static void page_show(ui_page_t *p)
     lv_obj_clear_flag(p->root, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(p->root);
     ui_input_set_group(p->group);   /* 把按键焦点交给本页 */
+    /* 首次进入时自动聚焦组内第一个控件，保证首按 OK 即可操作；
+     * 再次进入（pop 回来）保留之前的焦点位置 */
+    if (p->group && p->group->obj_focus == NULL) {
+        lv_group_focus_next(p->group);
+    }
     if (p->on_show) {
         p->on_show(p);
     }

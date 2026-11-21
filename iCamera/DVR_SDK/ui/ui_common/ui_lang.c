@@ -62,7 +62,7 @@ static const char *ui_str_en[] = {
     "Processing...",        /* UI_STR_PROCESSING */
     "TL",                   /* UI_STR_ACT_TIMELAPSE */
     "Mode",                 /* UI_STR_HINT_SWITCH */
-    "Menu",                 /* UI_STR_HINT_MENU */
+    "Back",                 /* UI_STR_BACK */
 };
 
 /* ------------------- 简体中文 ------------------- */
@@ -117,7 +117,7 @@ static const char *ui_str_zh_cn[] = {
     "处理中...",
     "延时",
     "切模式",
-    "菜单",
+    "返回",
 };
 
 /* ------------------- 繁體中文 ------------------- */
@@ -172,7 +172,7 @@ static const char *ui_str_zh_tw[] = {
     "處理中...",
     "縮時",
     "切模式",
-    "選單",
+    "返回",
 };
 
 /* ------------------- 日本語 ------------------- */
@@ -227,7 +227,7 @@ static const char *ui_str_ja[] = {
     "処理中...",
     "タイムラプス",
     "切替",
-    "メニュー",
+    "戻る",
 };
 
 /* ------------------- Русский ------------------- */
@@ -282,7 +282,7 @@ static const char *ui_str_ru[] = {
     "Обработка...",
     "Таймлапс",
     "Режим",
-    "Меню",
+    "Назад",
 };
 
 /* ------------------- ไทย ------------------- */
@@ -337,7 +337,7 @@ static const char *ui_str_th[] = {
     "กำลังดำเนินการ...",
     "ไทม์แลปส์",
     "เปลี่ยนโหมด",
-    "เมนู",
+    "ย้อนกลับ",
 };
 
 /* ------------------- Tiếng Việt ------------------- */
@@ -392,7 +392,7 @@ static const char *ui_str_vi[] = {
     "Đang xử lý...",
     "TL",
     "Chế độ",
-    "Menu",
+    "Quay lại",
 };
 
 /* ------------------- Deutsch ------------------- */
@@ -402,7 +402,7 @@ static const char *ui_str_de[] = {
     "Zeitraffer",
     "Wiedergabe",
     "Einstellungen",
-    "Menü",
+    "Zurück",
     "Auflösung",
     "Loop-Aufnahme",
     "WDR",
@@ -502,7 +502,7 @@ static const char *ui_str_fr[] = {
     "Traitement...",
     "Timelapse",
     "Mode",
-    "Menu",
+    "Retour",
 };
 
 /* ------------------- Italiano ------------------- */
@@ -557,7 +557,7 @@ static const char *ui_str_it[] = {
     "In corso...",
     "Timelapse",
     "Modalità",
-    "Menu",
+    "Indietro",
 };
 
 /* ------------------- Português ------------------- */
@@ -612,7 +612,7 @@ static const char *ui_str_pt[] = {
     "Processando...",
     "Timelapse",
     "Modo",
-    "Menu",
+    "Voltar",
 };
 
 /* 各语言表指针（下标 = ui_lang_id_t） */
