@@ -2031,15 +2031,6 @@ int HY_Enc_StopUserSet(CChannelContext *pChannelContext, ENCODE_STREAM_E eStream
             Zoom_StopDragZoom();
 #endif
 
-    /*停止MD*/
-    XTRACE_MUTEX_LOCK(&pChCtx->m_MDLock);
-    if (pChCtx->m_bStartMD)
-    {
-        HY_Enc_MD_Stop(pChCtx);
-        m_UserSetParam->restartMdFlag = TRUE;
-    }
-    XTRACE_MUTEX_UNLOCK(&pChCtx->m_MDLock);
-
     // 如果OSD开启则停止OSD
     XTRACE_MUTEX_LOCK(&pChCtx->m_OSDLock);
     if (pChCtx->m_bEnableTimeOSD)
@@ -2064,31 +2055,16 @@ int HY_Enc_StopUserSet(CChannelContext *pChannelContext, ENCODE_STREAM_E eStream
 
     XTRACE_MUTEX_UNLOCK(&pChCtx->m_OSDLock);
 
-     // 清除画框画线信息
-	Hi_MPP_ClearDrawLineInfo(1);
-
     return 0;
 }
 
 int HY_Enc_StartUserSet(CChannelContext *pChannelContext, ENCODE_STREAM_E eStream, UserSetParamFlag_t *m_UserSetParam)
 {
-    CChannelContext *pChCtx = NULL;
-
     if (NULL == pChannelContext)
     {
         ZW_ERROR("pChannelContext CANNOT be NULL\n");
         return -1;
     }
-
-    pChCtx = pChannelContext;
-
-    /*调整MD资源*/
-    XTRACE_MUTEX_LOCK(&pChCtx->m_MDLock);
-    if (m_UserSetParam->restartMdFlag)
-    {
-        HY_Enc_MD_Start(pChCtx);
-    }
-    XTRACE_MUTEX_UNLOCK(&pChCtx->m_MDLock);
 
     /* 调整OSD资源 */
     XTRACE_MUTEX_LOCK(&pChannelContext->m_OSDLock);
@@ -2285,9 +2261,6 @@ int HY_Enc_PlatformInit()
     s32Ret = Hi_MPP_InitOsd(pChCtx->pPlatformChannelhandle);
     DBG_ASSERT(s32Ret == 0, s32Ret, "Called Hi_MPP_InitOsd fail");
 
-    s32Ret = Hi_MPP_InitVda(pChCtx->pPlatformChannelhandle);
-    DBG_ASSERT(s32Ret == 0, s32Ret, "Called Hi_MPP_InitVda fail");
-
     s32Ret = Hi_MPP_InitVpssChn(pChCtx->pPlatformChannelhandle);
     DBG_ASSERT(s32Ret == 0, s32Ret, "Called Hi_MPP_InitVpssChn fail");
 
@@ -2303,9 +2276,6 @@ int HY_Enc_PlatformInit()
     pPlatCtx->m_bEncoderIsStart = TRUE;
     pPlatCtx->m_bHandInit = TRUE;
     pPlatCtx->m_bISPInitIsOver = TRUE;
-
-    s32Ret = Hi_MPP_InitVdaChn(pChCtx->pPlatformChannelhandle);
-    DBG_ASSERT(s32Ret == 0, s32Ret, "Called Hi_MPP_InitVdaChn fail");
 
     s32Ret = Hi_MPP_StartOSD(pChCtx->pPlatformChannelhandle);
     DBG_ASSERT(s32Ret == 0, s32Ret, "Called Hi_MPP_StartOSD fail");
@@ -2362,9 +2332,6 @@ int HY_Enc_PlatformDeInit()
 
     /* 停止及销毁OSD,MD,MOSAIC*/
     HY_Enc_StopUserSet(pChCtx, MAX_STREAM_COUNT, &m_UserSetParam);
-
-    Hi_MPP_SetHumanDetectDisEnable(pChCtx->pPlatformChannelhandle);
-
     // Hi_MPP_DeInitOsd();
 
     /* 停止编码 */
@@ -2524,8 +2491,6 @@ int HY_Enc_SwitchPicFormat(CChannelContext *pChannelContext, int EncChannel)
 
     //切分辨率，整个的SDK重置
     ZW_ERROR("OPEN Restar Enc !!!!!!\n");
-    // 停止用户设置
-    HY_Enc_StopUserSet(pChCtx, MAX_STREAM_COUNT, &m_UserSetParam);
 
     XTRACE_MUTEX_LOCK(&pChCtx->m_InitVPSSLock);
     XTRACE_MUTEX_LOCK(&pChCtx->m_CheckLumLock);
@@ -3261,39 +3226,21 @@ int HY_Enc_StopOsd(CChannelContext *pChannelContext, ENCODE_OSD_TYPE eOsdType, E
 
 int HY_Enc_MD_Start(CChannelContext *pChannelContext)
 {
-    int ret = 0;
-
-    ret = Hi_MPP_StartMD(pChannelContext->pPlatformChannelhandle);
-
-    return ret;
+    return 0;
 }
 
 int HY_Enc_MD_Stop(CChannelContext *pChannelContext)
 {
-    int ret = 0;
-
-    ret = Hi_MPP_StopMD(pChannelContext->pPlatformChannelhandle);
-
-    return ret;
+    return 0;
 }
 
 int HY_Enc_MD_SetPrecision(CChannelContext *pChannelContext)
 {
-    return Hi_MPP_MDSetPrecision(pChannelContext->pPlatformChannelhandle, pChannelContext->MotionFps, pChannelContext->MotionGrade);
+    return 0;
 }
 
 int HY_Enc_SetVideoPara(CChannelContext *pChannelContext)
 {
-    int s32Ret = 0;
-
-    s32Ret = Hi_MPP_SetImgPara(pChannelContext->pPlatformChannelhandle, pChannelContext->Bright, pChannelContext->Contrast,
-                    pChannelContext->Hue, pChannelContext->Saturation, pChannelContext->Sharpness);
-    if(s32Ret != 0)
-    {
-        ZW_ERROR("Hi_MPP_SetImgPara fail !\n");
-        return -1;
-    }
-
     return 0;
 }
 
@@ -3922,27 +3869,17 @@ int HY_Res_GetAuthInfo(unsigned char *pszAuthLicense, unsigned int *pAuthState)
 
 int HY_Enc_SetHumanTrackEn(CChannelContext *pChannelContext, int bEnable)
 {
-    XTRACE_MUTEX_LOCK(&pChannelContext->m_IVPLock);
-    int nRet = Hi_MPP_SetHumanTrackEn(pChannelContext->pPlatformChannelhandle, bEnable);
-    XTRACE_MUTEX_UNLOCK(&pChannelContext->m_IVPLock);
-    return nRet;
+    return 0;
 }
 
 int HY_Enc_SetHumanDetectEnable(CChannelContext *pChannelContext, int bEnable)
 {
-    XTRACE_MUTEX_LOCK(&pChannelContext->m_IVPLock);
-    int nRet = Hi_MPP_SetHumanDetectEnable(pChannelContext->pPlatformChannelhandle, bEnable);
-    XTRACE_MUTEX_UNLOCK(&pChannelContext->m_IVPLock);
-    return nRet;
+    return 0;
 }
 
 int HY_Enc_SetHumanShapeCfgV2(CChannelContext *pChannelContext)
 {
-    XTRACE_MUTEX_LOCK(&pChannelContext->m_IVPLock);
-    int nRet = Hi_MPP_SetIVPCfgV2(pChannelContext->pPlatformChannelhandle, &pChannelContext->m_stHumanShapeCfgV2);
-    XTRACE_MUTEX_UNLOCK(&pChannelContext->m_IVPLock);
-
-    return nRet;
+    return 0;
 }
 
 char speechLanguageDir[eSpeechLanguage_Num][16]=
@@ -4873,7 +4810,7 @@ end:
 
 int HY_Enc_GetBitrateInfo(CChannelContext *pChannelContext, int dataArr[], int arrlen)
 {
-    return Hi_MPP_GetBitrateInfo(pChannelContext->pPlatformChannelhandle, dataArr, arrlen);
+    return 0;
 }
 
 int HY_Enc_RegisterKeyStautsCallBack(KEY_STATUS_CALLBACK getKeyStateCallback)
@@ -4917,9 +4854,6 @@ void* DrawLineThread(void * lpParameter)
 
     CChannelContext *pChnCtx = NULL;
     SystemInfo_t *pSysInfo = NULL;
-    unsigned long long newTimeMs = get_ms();
-    unsigned long long lastTimeMs = newTimeMs;
-    int callCyclMs = 40;
     ThreadInfo_t *pParent = (ThreadInfo_t *)lpParameter;
 
        HY_Enc_GetEncChInfo(&pChnCtx);
@@ -4934,21 +4868,6 @@ void* DrawLineThread(void * lpParameter)
         {
             break;
         }
-
-        XTRACE_MUTEX_LOCK(&pChnCtx->m_EncLock);
-        XTRACE_MUTEX_LOCK(&pSysInfo->m_SysOSDLock);
-
-        //计算函数调用的时间间隔
-        newTimeMs = get_ms();
-        callCyclMs = newTimeMs - lastTimeMs;
-        lastTimeMs = newTimeMs;
-        callCyclMs = callCyclMs > 1000 ? 1000 : (callCyclMs < 0 ? 40 : callCyclMs);
-
-        //处理人形检测结果及布防区域
-        Hi_MPP_ReadyDrawLineInfo(pChnCtx->pPlatformChannelhandle, pChnCtx->m_HumanAreaOverlayEnable, 0, 0, callCyclMs);
-
-        XTRACE_MUTEX_UNLOCK(&pSysInfo->m_SysOSDLock);
-        XTRACE_MUTEX_UNLOCK(&pChnCtx->m_EncLock);
         usleep(40000);
     }
 

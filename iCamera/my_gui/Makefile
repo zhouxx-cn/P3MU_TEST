@@ -1,7 +1,6 @@
 #!/usr/bin/make -f
 
 include ../DVR_SDK/profile
-include ../../aisdk/aisdk_version.mk
 include ../../baseline/baseline_version.mk
 
 ifneq ($(findstring $(TYPE), Hi3516CV608 Hi3516CV610),)

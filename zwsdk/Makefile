@@ -1,6 +1,5 @@
 
 include ./profile
-include ../aisdk/aisdk_version.mk
 include ../baseline/baseline_version.mk
 
 CROSS_COMPILE = arm-v01c02s020-linux-musleabi-
@@ -21,10 +20,7 @@ XRS_PATH := -I./include/xrs/mauth \
 	-I../baseline/$(BASELINE_VERSION)/include/3rd \
 	-I../baseline/$(BASELINE_VERSION)/include/driver \
 
-ALGO_PATH := -I../aisdk/$(AISDK_INC_PATH)
-
 INC_PATH += $(XRS_PATH) \
-            $(ALGO_PATH) \
             -I./include \
             -I./include/common \
             -I../iCamera/modules/common \
