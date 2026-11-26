@@ -12,7 +12,6 @@
 #include "CMaintenance.h"
 #include "idvr_errno.h"
 #include "PAR/CConfig.h"
-#include "macro_pthread.h"
 #include "mysystem.h"
 // #include "sys_banned.h"
 #include "global_gather.h"
@@ -584,12 +583,10 @@ void *MaintenanceWorkThread(void *org)
 {
     PRT_TID();
 
-	BEGINRUN_THREAD;
-	CMaintenance *handle = (CMaintenance *) org;
+    CMaintenance *handle = (CMaintenance *)org;
 
-	handle->work_thread(org);
-	ENDRUN_THREAD;
-	return NULL;
+    handle->work_thread(org);
+    return NULL;
 }
 
 //##ModelId=49BB33320013

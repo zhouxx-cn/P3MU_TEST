@@ -1693,15 +1693,6 @@ int Zview_CreatThread()
     }
 #endif
 
-#if !defined __ISP_IMAGE_DEBUG__
-    RetValue = HY_Res_CreatThread(&pSysInfo->m_MiscTaskThread, 0, Hi_MPP_MiscTaskThread);
-    if (RetValue != 0)
-    {
-        ZW_ERROR("SlowFrameModeSwitch thread Creat Fail !!!!!!!!!! \n");
-        return -1;
-    }
-#endif
-
     return 0;
 }
 
@@ -1777,11 +1768,6 @@ int Zview_ExitThread()
         ZW_DEBUG("HY_Res_DestroyThread m_SlowFrameModeSwitchThread enter\n");
         HY_Res_DestroyThread(&pSysInfo->m_TrackerZoomThread);
     }
-
-#if !defined __ISP_IMAGE_DEBUG__
-    ZW_DEBUG("HY_Res_DestroyThread m_MiscTaskThread enter\n");
-    HY_Res_DestroyThread(&pSysInfo->m_MiscTaskThread);
-#endif
 
 #if defined __ONE_CLICK_CALL__
         /* 退出一键呼叫检测线程 */

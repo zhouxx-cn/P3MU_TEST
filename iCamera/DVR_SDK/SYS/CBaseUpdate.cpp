@@ -39,7 +39,6 @@
 #include "zwsdk.h"
 #include "CConfig.h"
 #include "mysystem.h"
-#include "macro_pthread.h"
 #include "md5Lib.h"
 #include "Authority.h"
 #include "PUB_BoradInfo.h"
@@ -64,7 +63,7 @@ extern "C" {
  * \RETURN
  * 1 or 0
 */
-static BOOL check_filename(const char *_path)
+static int check_filename(const char *_path)
 {
 	const char ext[] = ".bin";
 

@@ -60,7 +60,6 @@ int (*m_CheckInterNetStatusCallback)(int *) = NULL;
  **************************************************************************/
 static void *AutoNtpThreadProcess(void *param);
 static void *NtpTimeCountThreadProcess(void *param);
-static void *CheckInternetthreadIDProcess(void *param);
 
 /**************************************************************************
 *                           方法实现                                      *
@@ -219,68 +218,45 @@ int CheckDevSCodeFromFileAndRecover()
 //##ModelId=49BB333100F8
 CSysManager* CSysManager::GetInstance()
 {
-	// TODO: Add your specialized code here.
+    //初始化系统管理模块
+    if (NULL == theCSysManager)
+    {
+        theCSysManager = new CSysManager();
+        if (NULL != theCSysManager)
+        {
+            theCSysManager->theCWatchDog = new CWatchDog();
 
-	//初始化系统管理模块
-	if (NULL == theCSysManager)
-	{
-		theCSysManager                          = new CSysManager();
-		if ( NULL != theCSysManager)
-		{
-#ifndef NO_USE_BUZZER
-			theCSysManager->theCBuzzer          = new CBuzzer();
-			theCSysManager->theCBuzzer->StartBuzzerTask();
-#endif
-
-			theCSysManager->theCIP2PasswdResume = new CIP2PasswdResume();
-			theCSysManager->theCIP2PasswdResume->StartResumeTask();
-			theCSysManager->theCWatchDog        = new CWatchDog();
-
-        	//从配置文件初始化
-        	CConfig *pConfig = CConfig::GetInstance();
-        	if (NULL != pConfig)
-        	{
-				char strTimeZone[6] = {0};
-				pConfig->GetValue("PUB", "TimeZone", "8", strTimeZone, sizeof(strTimeZone) - 1);
-				theCSysManager->m_timezone = (int)(atof(strTimeZone) * 60);
+            //从配置文件初始化
+            CConfig *pConfig = CConfig::GetInstance();
+            if (NULL != pConfig)
+            {
+                char strTimeZone[6] = {0};
+                pConfig->GetValue("PUB", "TimeZone", "8", strTimeZone, sizeof(strTimeZone) - 1);
+                theCSysManager->m_timezone = (int)(atof(strTimeZone) * 60);
 
     			theCSysManager->m_ntp_enable = pConfig->GetValue(INTP_CfgSection, "Enable", 0);
     			theCSysManager->m_nIntervalSec = pConfig->GetValue(INTP_CfgSection, "IntervalSec", 1);
                 IntervalHour = (theCSysManager->m_nIntervalSec >= 3600) ? (theCSysManager->m_nIntervalSec / 3600) : theCSysManager->m_nIntervalSec;
-                
-    			pConfig->GetValue(INTP_CfgSection, "DomainName", "time.windows.com", theCSysManager->m_ntp_server, 256);			
 
-
-			    if (theCSysManager->m_ntp_server[strlen(theCSysManager->m_ntp_server)-1] == '\r' || theCSysManager->m_ntp_server[strlen(theCSysManager->m_ntp_server)-1] == '\n')
+                pConfig->GetValue(INTP_CfgSection, "DomainName", "time.windows.com", theCSysManager->m_ntp_server, 256);
+                if (theCSysManager->m_ntp_server[strlen(theCSysManager->m_ntp_server) - 1] == '\r' ||
+                    theCSysManager->m_ntp_server[strlen(theCSysManager->m_ntp_server) - 1] == '\n')
                 {
                     theCSysManager->m_ntp_server[strlen(theCSysManager->m_ntp_server)-1] = '\0';
                 }
-
-        	}
-        	else
-        	{
+            }
+            else
+            {
                 theCSysManager->m_timezone = 8 * 60;
                 theCSysManager->m_ntp_enable = 0;
                 theCSysManager->m_nIntervalSec = 1;
                 theCSysManager->m_net_has_connected = 0;                
                 strncpy(theCSysManager->m_ntp_server, "time.windows.com", sizeof(theCSysManager->m_ntp_server) - 1);
-        	}
-		#if defined (__IS_SUPPORT_APP_SHARE__)
-			theCSysManager->m_GetSCodeValid = 1;
-
-            /* 设备S码状态初始化，S码存放于配置文件中 */
-            theCSysManager->InitDevSCodeState();
-		#endif
-
-			DST_Init();
-#if 0
-            //开机后如果使能了ntp则立即对时
-            if(theCSysManager->m_ntp_enable)
-            {
-                theCSysManager->m_configChanged = 1;
             }
-#endif
-		    //创建同步线程开始同步
+
+            DST_Init();
+
+            //创建同步线程开始同步
             int nret = pthread_create(&theCSysManager->m_autopNtp, NULL, AutoNtpThreadProcess, theCSysManager);
             if(nret)
             {
@@ -291,18 +267,11 @@ CSysManager* CSysManager::GetInstance()
             if(nret)
             {
                 CSYS_WRAN("pthread create NtpTimeCountThreadProcess ERROR!!!\n");
-        	}
-			//创建互联网检测线程
-            nret = pthread_create(&theCSysManager->m_CheckInternetthreadID, NULL, CheckInternetthreadIDProcess, theCSysManager);
-            if(nret)
-            {
-                CSYS_WRAN("pthread create CheckInternetthreadIDProcess ERROR!!!\n");
-        	}            
-		}
-	}
-	return (CSysManager*)theCSysManager;
+            }
+        }
+    }
+    return (CSysManager *)theCSysManager;
 }
-
 
 //!\brief 销毁实例
 //!\return  成功为0，失败为-1
@@ -313,21 +282,12 @@ int CSysManager::ReleaseInstance()
 
 	//释放系统管理模块
 	if (NULL != theCSysManager)
-	{
-    #ifndef NO_USE_BUZZER
-            theCSysManager->theCBuzzer->StopBuzzerTask();
-        //  delete theCSysManager->theCBuzzer;
-    #endif
+    {
+        theCSysManager->theCIP2PasswdResume->StopResumeTask();
+    }
 
-		theCSysManager->theCIP2PasswdResume->StopResumeTask();
-		//delete theCSysManager->theCIP2PasswdResume;
-		//delete theCSysManager->theCWatchDog;
-		//delete theCSysManager;
-		//theCSysManager = NULL;
-	}
-
-	CSYS_INF("ReleaseInstance End!\n");
-	return (int)0;
+    CSYS_INF("ReleaseInstance End!\n");
+    return (int)0;
 }
 
 //!\brief 开始蜂鸣器工作任务
@@ -673,45 +633,6 @@ static void *AutoNtpThreadProcess(void *param)
         usleep(1000000);
     }
 	
-    return NULL;
-}
-
-/* 检测互联网连通线程 */
-static void *CheckInternetthreadIDProcess(void *param)
-{
-    PRT_TID();
-    pthread_detach(pthread_self());
-
-    CSysManager *pCsys = (CSysManager *)param;
-    int conn_status = 0;
-    int i = 0;
-
-    CSYS_DBG("Start to check Internet connect status ...\n");
-
-    /* 300秒钟检测当前外网网络状态(如果成功则提前退出，否则超时退出) */
-    /* 实际测试如果一直无法连接互联网，该线程由于for循环会持续1个小时以上 */
-    for (i=0; i<300; i++)
-    {
-        if (m_CheckInterNetStatusCallback)
-        {
-            m_CheckInterNetStatusCallback(&conn_status);
-            if (conn_status)
-            {
-                pCsys->m_net_has_connected = 1;
-                break;
-            }
-            else
-            {
-                pCsys->m_net_has_connected = 0;
-            }
-        }
-
-        sleep(1);
-    }
-	pCsys->m_CheckNetThreadExitFlag = 1;
-
-    CSYS_INF("Current Internet is %s!\n", conn_status?"OK":"Break");
-
     return NULL;
 }
 

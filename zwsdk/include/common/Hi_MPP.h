@@ -887,8 +887,6 @@ int Hi_MPP_SetHumanShapeCfgV2();
  */
 void *Hi_MPP_HDThread(void * lpParameter);
 
-void *Hi_MPP_MiscTaskThread(void *lpParameter);
-
 int Hi_MPP_LoadAlgoParame(void *hChannelHandle);
 
 /**

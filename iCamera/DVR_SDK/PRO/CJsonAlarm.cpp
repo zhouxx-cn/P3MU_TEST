@@ -6,8 +6,6 @@
 #include "CJsonPub.h"
 #include "zwsdk.h"
 #include "newhie/HieServer.h"
-#include "MPU_STR_API.h"
-#include "MPU_AVL_API.h"
 // #include "sys_banned.h"
 #include "global_gather.h"
 

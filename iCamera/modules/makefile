@@ -2,8 +2,7 @@
 
 include ../DVR_SDK/profile
 
-#MODS:= md5 moto base64 adsl avi ddt disk ftp_new ip watch memrecord sd_ops SD wifi smtp hybackup iniparser CircleQueue GPRS common XRSBleCommuProtocol 
-MODS:= md5 moto base64 adsl avi ddt disk ip watch memrecord sd_ops SD wifi hybackup iniparser CircleQueue GPRS common XRSBleCommuProtocol 
+MODS:= md5 moto base64 adsl avi ddt disk ip watch memrecord sd_ops SD wifi hybackup iniparser CircleQueue common XRSBleCommuProtocol 
 
 MODS += watch/WatchDaemon
 

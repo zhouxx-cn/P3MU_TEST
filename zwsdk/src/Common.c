@@ -56,7 +56,7 @@ SystemInfo_t				g_SystemInfo;
 
 static ZWSDK_PresetConfig s_sdk_presetconfig = {};
 
-static int g_MaxSensorCnt = SUPPORT_MAX_SENSOR_COUNT-1; //默认为真三目
+static int g_MaxSensorCnt = SUPPORT_MAX_SENSOR_COUNT; //默认为真三目
 
 static const stuSpeechRemindTypeMap speechRemindTypeMap[] = {
     {eSpeechType_Remind_1,  SPEECH_REMINDER_SCHEDULE_1,     SPEECH_REMIND_SCHEDULE_CUSTOM_FILE1},

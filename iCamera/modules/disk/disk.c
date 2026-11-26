@@ -31,7 +31,6 @@
 #include "MemoryInterface.h"
 #endif
 
-#include "macro_pthread.h"
 #include "disk.h"
 #include "fdisk.h"
 #include "mysystem.h"
@@ -2707,15 +2706,13 @@ static void *disk_readonly()
 {
     PRT_TID();
 
-	BEGINRUN_THREAD;
-	while (1)
-	{
-		sleep(30);
-		disk_readonly_check();
-	}
+    while (1)
+    {
+        sleep(30);
+        disk_readonly_check();
+    }
 
-	ENDRUN_THREAD;
-	pthread_exit(0);
+    pthread_exit(0);
 }
 
 #define USE_ONE_DISKTRANSFERHANDLE
@@ -2756,15 +2753,13 @@ static void *thread_disk_writefile(void *pContext)
 {
     PRT_TID();
 
-	BEGINRUN_THREAD;
+    LPDISKTRANSFERHANDLE handle = (LPDISKTRANSFERHANDLE)pContext;
 
-	LPDISKTRANSFERHANDLE handle = (LPDISKTRANSFERHANDLE) pContext;
+    int bRun, fd;
 
-	int bRun, fd;
+    unsigned char *pBuf;
 
-	unsigned char *pBuf;
-
-	unsigned long dwSize;
+    unsigned long dwSize;
 
 	unsigned long dwSizeWrite;//需要写入的数据长度
 	int write_num = 0;
@@ -2888,8 +2883,7 @@ static void *thread_disk_writefile(void *pContext)
 	}
 	while (bRun);
 
-	ENDRUN_THREAD;
-	return NULL;
+    return NULL;
 }
 
 /**
@@ -3351,10 +3345,8 @@ static void *sdcard_hotplug()
 
 	static char szCurrentSDDev[20] = DEV_PATH"0";
 
-	BEGINRUN_THREAD;
-
-	while (1)
-	{
+    while (1)
+    {
 		sleep(1);
 
 		//检测SD卡, 0 表示有SD卡，1表示没有SD卡
@@ -3412,8 +3404,7 @@ static void *sdcard_hotplug()
 		}
 	}
 
-	ENDRUN_THREAD;
-	pthread_exit(0);
+    pthread_exit(0);
 }
 #endif
 

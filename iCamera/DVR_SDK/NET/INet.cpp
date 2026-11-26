@@ -45,10 +45,6 @@
 
 #include "ping.h"
 #include "IPPPoE.h"
-#include "MPU_AVL_API.h"
-#include "MPU_SYS_API.h"
-#include "MPU_PUB_API.h"
-#include "HttpClient.h"
 #include "cJSON.h"
 #include "TDES.h"
 #include "PUB/common_pub.h"
@@ -84,7 +80,6 @@ extern "C" {
 #if defined  (__USE_FTP__)
 #include "ftpClient.h"
 #endif
-#include "MPU_LCD_API.h"
 
 #if defined(__IS_SUPPORT_DYNAMIC_GRAPHICS__)
 #include "CDynamicGraphics.h"
@@ -327,8 +322,7 @@ static void *CheckCardTypeTimerThread(void *lParam);
 #endif
 static void *IPAdjust_CheckThread(void *lParam);
 static void *IPAdjustProcessThread(void *lParam);
- static void TruncateIPString(char *szIPString);
-static void *ApplyDIDManulThread(void *lParam);
+static void TruncateIPString(char *szIPString);
 static int isValidPort(unsigned short nPort);
 static int CheckIpConflic(char *interface,  char *ipaddr);
 static void *DomainResolutionManageThread(void *lParam);
@@ -3170,84 +3164,7 @@ int INet::Init()
 	}
 #endif
 
-#if defined (__USE_FTP__)
-    if (bSupportFTP)
-    {
-	 	SetFtpParam(&m_FtpUsrInfo, m_sTutkUID);
-
-		NET_DBG("--------Inet.cpp-----Net::init()----------创建FTP操作线程--------------\n");
-		ret = pthread_create(&m_FtpOperateThread, NULL, SendFileToFtpServerThread, this);//开启线程发送文件到服务端
-		if (ret < 0)
-		{
-			NET_ERR("pthread_create <FtpOperateThread> failed(%d)\n", ret);
-			UnInit();
-			return -1;
-		}		 
-	
-		m_FtpConnStatus = GetFtpConnStatus();
-		/* 注册回调函数   */
-		//NET_SetMotionCallBack(TriggerEvent);
-    }
-#endif
-
-#if defined (__USE_APPLY_DID_MANUAL__)
-    {
-
-		NET_DBG("--------Inet.cpp-----Net::init()----------创建DID申请线程--------------\n");
-		ret = pthread_create(&m_ApplyDID, NULL, ApplyDIDManulThread, this);
-		if (ret < 0)
-		{
-			NET_ERR("pthread_create <ApplyDIDManulThread> failed(%d)\n", ret);
-			UnInit();
-			return -1;
-		}
-    }
-#endif
-
-#if defined (__MODULE_4G_SUPPORT__)
-    if (bSupportGPRS)
-    {
-        NET_DBG("--------Inet.cpp-----Net::init()----------创建ROUTE检测线程--------------\n");
-        ret = pthread_create(&m_OperateRouterThread, NULL, OperateRouterThread, this);
-        if (ret < 0)
-        {
-            NET_ERR("pthread_create<OperateRouterThread> failed(%d)\n", ret);
-            UnInit();
-            return -1;
-        }
-
-        NET_DBG("--------Inet.cpp-----Net::init()----------创建GPRS状态检测线程--------------\n");
-        ret = pthread_create(&m_GPRS_CheckStatusThread, NULL, GPRS_CheckStatusThread, this);
-        if (ret < 0)
-        {
-            NET_ERR("pthread_create<GPRS_CheckStatusThread> failed(%d)\n", ret);
-            UnInit();
-            return -1;
-        }
-		G4_Control_Manager_t  s_4GHandle_info = {0};
-		s_4GHandle_info.GetSCode = MPU_SYS_DeviceBind_GetSCode;
-
-        NET_DBG("--------Inet.cpp-----Net::init()----------创建4G模块处理线程--------------\n");
-        ret = pthread_create(&m_4GModule_ProcessThread, NULL, Module4G_ManagerProcessThread, &s_4GHandle_info);
-        if (ret < 0)
-        {
-            NET_ERR("pthread_create<Module4G_ManagerProcessThread> failed(%d)\n", ret);
-            UnInit();
-            return -1;
-        }
-
-        // 创建秒钟计时器线程
-		ret = pthread_create(&m_CheckCardTypeTimerThread, NULL, CheckCardTypeTimerThread, this);
-		if (ret < 0)
-		{
-			NET_ERR("pthread_create<m_CheckCardTypeTimerThread> failed(%d)\n", ret);
-			UnInit();
-			return -1;
-		}
-    }
-#endif
-
-	NET_DBG("---------Inet.cpp-----Net::init()---End!!!!!!!!------\n");
+    NET_DBG("---------Inet.cpp-----Net::init()---End!!!!!!!!------\n");
 #if defined (__IS_SUPPORT_WLAN__)
 	/* 针对WIFI和4G模块，在系统启动的时候，需要配置一下路由 */
     if (bSupportWIFI)
@@ -3609,23 +3526,18 @@ int INet::NET_SetTutkUID(TutkCfg *pTutkCfg, int pSetMethod)
     	mysystem(cmd_string);
     }
 #endif
-
-#if defined (__IS_SUPPORT_APP_SHARE__)
-	MPU_SYS_DeviceBind_CreateSCode(m_sTutkUID);	
-#endif
-
-	if (bNeedRebootFlag)
-	{
-		NET_WARN("**********change Tutk UID need reboot !**********\n");
-		CConfig *pConfig = CConfig::GetInstance();
-		if (NULL != pConfig)
-		{
-			pConfig->SaveFileReal();
+    if (bNeedRebootFlag)
+    {
+        NET_WARN("**********change Tutk UID need reboot !**********\n");
+        CConfig *pConfig = CConfig::GetInstance();
+        if (NULL != pConfig)
+        {
+            pConfig->SaveFileReal();
 			pConfig->ForbiddenSaveFile();
-		}
+        }
         mysystem("reboot -d 10 &");
     }
-	NET_INFO("my add: ----NET_SetTutkUID---return\n");	
+    NET_INFO("my add: ----NET_SetTutkUID---return\n");
 
     return 0;
 }
@@ -4404,541 +4316,6 @@ int INet::NET_SetUlkStatus(int *pUlkStatus)
 	return 0;
 }
 
-#if defined (__USE_APPLY_DID_MANUAL__)
-int INet::NET_SetConnectStringOnly(HY_P2P_CONNECT_INFO pConnectString)
-{
-	int i = 0;
-
-	//剩下的是新平台，若新平台没有传连接串则有问题
-	if (!strncmp(pConnectString.szConnectString, "", sizeof(pConnectString.szConnectString)))//如果连接串信息为空则返回-1
-	{
-		return -1;
-	}
-	
-	ZWHost_DOMAIN_INFO_LIST stZwhostDomainInfo = {0};
-
-    stuConnectInfo connect_info;
-    memset(&connect_info, 0, sizeof(connect_info));
-	memcpy(connect_info.szConnectString, pConnectString.szConnectString, strlen(pConnectString.szConnectString));
-	memcpy(connect_info.szPlatformName, pConnectString.szPlatformName, strlen(pConnectString.szPlatformName));
-	memcpy(connect_info.szAuthWord, pConnectString.szAuthWord, strlen(pConnectString.szAuthWord));
-    Authorize_GetConnectInfo(GG_CLOUD_LINENUM, &connect_info);
-
-    Authorize_SetConnectInfo(LINENUM_MAX, &connect_info);
-	
-	for (i = 0; i < 8; i++)
-	{
-		if (!strncmp(pConnectString.struDomain[i].szDomain, "", sizeof(pConnectString.struDomain[i].szDomain)))
-		{
-			continue;
-		}
-
-		memcpy(stZwhostDomainInfo.stDomainInfoList[i].cDomain, pConnectString.struDomain[i].szDomain, sizeof(pConnectString.struDomain[i].szDomain));
-		memcpy(stZwhostDomainInfo.stDomainInfoList[i].cIPv4, pConnectString.struDomain[i].szIP, sizeof(pConnectString.struDomain[i].szIP));
-		stZwhostDomainInfo.nCount++;
-	}
-
-	//更新zwhost
-	Hosts_UpdateDomainList(&stZwhostDomainInfo);
-
-#if defined (__USE_P2P_PUSH__)
-	//设置AuthWord
-	ZWP2PPUSHVNClient_SetCustomAuthWord(pConnectString.szAuthWord);
-#endif
-
-	return 0;
-}
-
-int INet::NET_SetApplyDIDRequestUrl(char *pRequestUrl)
-{                            
-    char *fpstart = NULL;
-    char *fpend = NULL;
-	char UrlportStr[6] = {0};
-    
-    if (NULL != pRequestUrl)
-    {
-        if (strlen(pRequestUrl) > MIX_REQUEST_URL_LEN)
-        {
-            memset(m_RequestUrl, 0, MAX_REQUEST_URL_LEN);
-            memcpy(m_RequestUrl, pRequestUrl, MAX_REQUEST_URL_LEN);
-            if (('\n' == m_RequestUrl[strlen(m_RequestUrl) - 1]) || ('\r' == m_RequestUrl[strlen(m_RequestUrl) - 1]))
-            {
-                m_RequestUrl[strlen(m_RequestUrl) - 1] = '\0';
-            }
-            
-        	fpstart = strchr(m_RequestUrl, ':');	
-        	fpstart = strchr(fpstart+1, ':');	
-        	fpend = strchr(fpstart+1, '/');
-        	
-            memcpy(UrlportStr, (fpstart+ 1), (fpend - fpstart - 1));	
-        	
-        	m_RequestUrlPort = atoi(UrlportStr);                
-        }
-    }
-    
-    m_iApplyFromSFlag = 1;
-    
-    m_iApplyStatus = 1;
-    m_iApplyErrCode = 0;
-    
-    g_TimtCount = 0;
-    g_TimtOut = 1;
-    
-    return 0;
-}
-
-static void *ApplyDIDManulThread(void *lParam)
-{
-    PRT_TID();
-
-	unsigned int index = 0;
-    char macAddres[18] = {0};
-    char macAddresTmp[18] = {0};
-    char cSerialNum[32] = {0};
-    char cSerialNumTmp[8] = {0};
-    char cChipID[64] = {0};
-    int iChipIDLen = sizeof(cChipID);
-    char cTime[32] = {0};
-    
-    char command[64] = {0};
-    FILE *file_new;
-    char *fpstart = NULL;
-    char *fpend = NULL;
-	char UrlportStr[6] = {0};
-    char urlTmp[MIX_REQUEST_URL_LEN] = {0};
-        
-    int iGetInfo = 1;
-    /*
-        1 数据正常，且包含did
-        2 数据正常，但未分配did、或其他问题
-        3 服务器交互失败
-        4 数据解析错误
-    */
-    int iResult = 0;
-    int iConnect = 0;
-    char cTutkUID[MAX_DID_LENGTH] = {0};
-    char cPushID[MAX_PUSH_ID_LENGTH] = {0};
-    HY_DVR_AUTH_INFO_V2 authInfo;
-    
-    char *acResponse = NULL;
-    int timeoutCount = 3;
-    //密钥    固定头 + mac(去掉":"大写) + sn后四位(大写)
-	char desKey[64] = "xrs4FcQM";
-    CHttpClientV2 *pHttpClient = NULL;
-
-	INet *pnet = (INet *)lParam;
-    
-	if (NULL == pnet)
-	{
-		NET_ERR("NULL==pnet\n");
-		return NULL;
-	}
-
-	while (1)
-	{
-        //升级方式更新服务器地址后操作
-        if (0 == access(APPLYDIDSERVERINFOTMP, F_OK))
-        {
-            file_new = fopen(APPLYDIDSERVERINFOTMP, "r");
-            if(NULL != file_new)
-            {
-                fread(urlTmp, sizeof(char), MAX_REQUEST_URL_LEN, file_new);
-                fflush(file_new);
-                fclose(file_new);
-
-                if (strlen(urlTmp) <= MIX_REQUEST_URL_LEN)
-                {
-                    memset(command, 0 , sizeof(command));
-                    snprintf(command, sizeof(command), "rm %s", APPLYDIDSERVERINFOTMP);
-                    mysystem(command);
-                }
-                else
-                {
-                    memset(command, 0 , sizeof(command));
-                    snprintf(command, sizeof(command), "mv -v %s %s", APPLYDIDSERVERINFOTMP, APPLYDIDSERVERINFOCFGBAK);
-                    mysystem(command);
-                
-                    file_new = fopen(APPLYDIDSERVERINFOCFGBAK, "r");
-                    if(NULL != file_new)
-                    {
-                        memset(pnet->m_RequestUrl, 0, MAX_REQUEST_URL_LEN);
-                    
-                        fread(pnet->m_RequestUrl, sizeof(char), MAX_REQUEST_URL_LEN, file_new);
-                        fflush(file_new);
-                        fclose(file_new);
-
-                        if (('\n' == pnet->m_RequestUrl[strlen(pnet->m_RequestUrl) - 1]) || ('\r' == pnet->m_RequestUrl[strlen(pnet->m_RequestUrl) - 1]))
-                        {
-                            pnet->m_RequestUrl[strlen(pnet->m_RequestUrl) - 1] = '\0';
-                        }
-
-                        fpstart = strchr(pnet->m_RequestUrl, ':');    
-                        fpstart = strchr(fpstart+1, ':');   
-                        fpend = strchr(fpstart+1, '/');
-                        
-                        memcpy(UrlportStr, (fpstart+ 1), (fpend - fpstart - 1));    
-                        
-                        pnet->m_RequestUrlPort = atoi(UrlportStr);
-                    }
-                }
-            }
-        }
-	
-	    if (0 == pnet->m_iApplyFromSFlag)
-        {
-            sleep(1);
-            timeoutCount = 3;
-            iResult = 0;
-            iConnect = 0;
-            continue;
-        }
-        else
-        {
-            pnet->m_iApplyStatus = 1;
-            //pnet->m_iApplyErrCode = 0;
-            iResult = 3;
-            
-            //获得设备信息
-            if (iGetInfo)
-            {
-                //mac sn chipID
-                pnet->NET_GetMacAddress(macAddres);
-                //memcpy(macAddres, "5A:58:00:00:24:3F", sizeof(macAddres));
-                int j = 0;
-                for(index = 0; index < strlen(macAddres); index++)
-                {
-                    if (':' != macAddres[index])
-                    {
-                        if (macAddres[index] >= 'a' && macAddres[index] <= 'z')
-                        {
-                            macAddresTmp[j++] = macAddres[index] - 32;
-                        }
-                        else
-                        {
-                            macAddresTmp[j++] = macAddres[index];
-                        }
-                    }
-                }
-                
-                ZWSys_GetSerialNum((unsigned char *)cSerialNum);
-                //memcpy(cSerialNum, "I20AA15256FEB21EF623261", sizeof(cSerialNum));
-                if ('\n' == cSerialNum[strlen(cSerialNum) - 1] || '\r' == cSerialNum[strlen(cSerialNum) - 1])
-                {
-                    cSerialNum[strlen(cSerialNum) - 1] = '\0';
-                }
-
-                j = 0;
-                for(index = (strlen(cSerialNum) - 4); index < strlen(cSerialNum); index++)
-                {
-                    if (cSerialNum[index] >= 'a' && cSerialNum[index] <= 'z')
-                    {
-                        cSerialNumTmp[j++] = cSerialNum[index] - 32;
-                    }
-                    else
-                    {
-                        cSerialNumTmp[j++] = cSerialNum[index];
-                    }
-                }
-
-                memset(cChipID, 0, sizeof(cChipID));
-                GetDeviceUUID(cChipID, iChipIDLen);
-                
-                //密钥    固定头 + mac(去掉":"大写) + sn后四位(大写)
-                strncat(desKey, macAddresTmp, (sizeof(desKey) - strlen(desKey) - 1));
-                strncat(desKey, cSerialNumTmp, (sizeof(desKey) - strlen(desKey) - 1));
-                if ('\n' == desKey[strlen(desKey) - 1])
-                {
-                    desKey[strlen(desKey) - 1] = '\0';
-                }
-                
-                iGetInfo = 0;
-            }
-
-            pHttpClient = new CHttpClientV2();
-            if (NULL == pHttpClient)
-            {
-                NET_ERR("\n %s-%d   new fail CHttpClientV2\n", __FUNCTION__, __LINE__);
-                continue;
-            }
-			pHttpClient->Initialize();
-            
-			do
-			{
-			    //组装请求信息
-                cJSON *JsonHeartBeatReq = cJSON_CreateObject();
-
-                if (NULL == JsonHeartBeatReq)
-                {
-                    NET_ERR("JsonHeartBeatReq NULL");
-                    continue;
-                }
-                
-                cJSON *obj_Item = NULL;
-
-                //mac
-                obj_Item = cJSON_CreateString(macAddres);
-                cJSON_AddItemToObject(JsonHeartBeatReq, "mac", obj_Item);
-
-                //sn
-                obj_Item = cJSON_CreateString(cSerialNum);
-                cJSON_AddItemToObject(JsonHeartBeatReq, "sn", obj_Item);
-
-                //chipID
-                obj_Item = cJSON_CreateString(cChipID);
-                cJSON_AddItemToObject(JsonHeartBeatReq, "chipId", obj_Item);
-
-                //time
-                time_t curTime = time(NULL);
-                snprintf(cTime, sizeof(cTime), "%lld", curTime);
-                //memcpy(cTime, "123456789", sizeof(cTime));
-                obj_Item = cJSON_CreateString((const char*)cTime);
-                cJSON_AddItemToObject(JsonHeartBeatReq, "deviceTime", obj_Item);
-                
-                char *pcHeartBeatReq = cJSON_Print(JsonHeartBeatReq);
-                if (NULL == pcHeartBeatReq)
-                {
-                    cJSON_Delete(JsonHeartBeatReq);
-                    continue;
-                }
-                
-				int iRet = pHttpClient->HttpPost(pnet->m_RequestUrl, pnet->m_RequestUrlPort, NULL, pcHeartBeatReq, strlen(pcHeartBeatReq));
-                if (0 == g_TimtOut)
-                {
-                    break;
-                }
-                
-				if (0 == iRet || 200 == iRet)
-				{
-                    iResult = 4;
-
-					pHttpClient->GetHttpResponse(&acResponse, MAX_HTTP_RESPONSE_LENGTH);
-
-					cJSON *json_response = cJSON_Parse(acResponse);
-					if (NULL == json_response)
-					{
-                        NET_ERR("cJSON_Parse err");
-						iRet = -1;
-						goto FAILED_0;
-					}
-
-					cJSON *json_data = cJSON_GetObjectItem(json_response, "code");
-					if (NULL == json_data)
-					{
-						iRet = -1;
-						goto FAILED_0;
-					}
-
-                    if (200 != json_data->valueint)
-                    {   
-                        iResult = 2;
-                        g_TimtOut = 0;
-                        g_TimtCount = 0;
-                        pnet->m_iApplyStatus = 4;
-                        pnet->m_iApplyErrCode = json_data->valueint;
-                    }
-                    else
-                    {
-    					json_data = cJSON_GetObjectItem(json_response, "data");
-    					if (NULL == json_data)
-    					{
-    						iRet = -1;
-    						goto FAILED_0;
-    					}
-                        
-    					cJSON *json_text = cJSON_GetObjectItem(json_data, "text");
-    					if (NULL == json_text)
-    					{
-    						iRet = -1;
-    						goto FAILED_0;
-    					}
-
-    					unsigned long OutLength = strlen(json_text->valuestring);
-    					char *pcOut = NULL;
-    					char *pcRealCipher = NULL;
-
-    					pcOut = (char *)malloc(OutLength);
-    					if (NULL == pcOut)
-    					{
-    						iRet = -1;
-    						goto FAILED_0;
-    					}
-    					memset(pcOut, 0, OutLength);
-
-    					TDES des(TDES::TDes3Key);
-    					des.SetDecrypt();
-                        //char *strKey = "xrs4FcQM5A58000021963C34"; //测试用秘钥key
-    					des.SetKey((unsigned char *)desKey, strlen(desKey));
-    					//des.SetKey((unsigned char *)strKey, strlen(strKey));
-    					pcRealCipher = TBase64::Base64_Decode(json_text->valuestring, OutLength);
-    					des.Run((unsigned char *)pcRealCipher, (unsigned char *)pcOut, OutLength);
-    					free(pcRealCipher);
-
-    					cJSON *json_text_root = cJSON_Parse(pcOut);
-    					if (NULL == json_text_root)
-    					{
-    						iRet = -1;
-    						SAFE_FREE(pcOut);
-    						goto FAILED_0;
-    					}
-
-                        //1. 获取did
-    					cJSON *json_did = cJSON_GetObjectItem(json_text_root, "did");
-    					if (NULL == json_did)
-    					{
-    						iRet = -1;
-    						SAFE_FREE(pcOut);
-    						goto FAILED_0;
-    					}
-                        
-    					cJSON *json_p2pStrand = cJSON_GetObjectItem(json_text_root, "p2pStrand");
-    					if (NULL == json_p2pStrand)
-    					{
-    						iRet = -1;
-    						SAFE_FREE(pcOut);
-    						goto FAILED_0;
-    					}
-
-
-                        memset(cTutkUID, 0, sizeof(cTutkUID));
-                        memset(cPushID, 0, sizeof(cPushID));
-                        if (strlen(json_did->valuestring) > 30)
-                        {
-                            char *fpstart = NULL;
-                            char *fpend = NULL;     
-
-                            fpstart = json_did->valuestring;
-                            fpend = strchr(json_did->valuestring, '#');
-                            memcpy(cTutkUID, fpstart, fpend - fpstart);
-                            memcpy(cPushID, fpend + 1, 8);
-                        }
-                        else
-                        {
-                            memcpy(cTutkUID, json_did->valuestring, sizeof(cTutkUID));
-                        }
-                        memcpy(authInfo.struP2PConnectInfo.szPlatformName, cTutkUID, 4);
-
-                        //取出连接串等信息
-                        cJSON *json_p2pHead = cJSON_GetObjectItem(json_p2pStrand, authInfo.struP2PConnectInfo.szPlatformName);
-    					if (NULL != json_p2pHead)
-    					{
-    					    iConnect = 1;
-                            
-    					    //连接串
-                            json_data = cJSON_GetObjectItem(json_p2pHead, "server");
-                            if (NULL != json_data)
-                            {
-                                memcpy(authInfo.struP2PConnectInfo.szConnectString, json_data->valuestring, sizeof(authInfo.struP2PConnectInfo.szConnectString));
-                            }
-
-                            //push key
-                            json_data = cJSON_GetObjectItem(json_p2pHead, "authword");
-                            if (NULL != json_data)
-                            {
-                                memcpy(authInfo.struP2PConnectInfo.szAuthWord, json_data->valuestring, sizeof(authInfo.struP2PConnectInfo.szAuthWord));
-                            }
-
-                            //域名、地址
-                            json_data = cJSON_GetObjectItem(json_p2pHead, "domain");                                
-                            int arr = cJSON_GetArraySize(json_data);
-                            int i = 0;
-                            cJSON *json_arr = NULL;
-                            cJSON *json_value = NULL;
-                            
-                            for(i = 0; i < arr; i++)
-                            {
-                                json_arr = cJSON_GetArrayItem(json_data, i);
-                                if (NULL != json_arr)
-                                {
-                                    json_value = cJSON_GetObjectItem(json_arr, "address");
-                                    if (NULL != json_value)
-                                    {
-                                        memcpy(authInfo.struP2PConnectInfo.struDomain[i].szDomain, json_value->valuestring, sizeof(authInfo.struP2PConnectInfo.struDomain[i].szDomain));
-                                    }
-                                    
-                                    json_value = cJSON_GetObjectItem(json_arr, "ip");
-                                    if (NULL != json_value)
-                                    {
-                                        memcpy(authInfo.struP2PConnectInfo.struDomain[i].szIP, json_value->valuestring, sizeof(authInfo.struP2PConnectInfo.struDomain[i].szIP));
-                                    }
-                                }
-                            }
-    					}
-                        else
-                        {
-                            iConnect = 0;
-                        }
-
-                        iResult = 1;
-                        
-    					SAFE_FREE(pcOut);
-                    }
-                    
-                    goto FAILED_0;
-                    
-                }
-                else
-                {
-					NET_ERR("Apply DID Munally failed(%d)\n", timeoutCount);
-                    //iResult = 3;
-					if (timeoutCount > 1)
-					{
-						continue;
-					}
-                }
-            }while (--timeoutCount);
-
-            FAILED_0:
-                if (1 == iResult)
-                {
-                    TutkCfg pTutkCfg = {0};
-
-                    pnet->m_iApplyErrCode = 200;
-                    
-					//设备获取DID，保证重启之后P2P使能开启
-                    pTutkCfg.bEnable = 1;
-                    pTutkCfg.iStatus =  0;
-                    memcpy(pTutkCfg.szTutkUID, cTutkUID, sizeof(cTutkUID));
-                    memcpy(pTutkCfg.szPushID, cPushID, sizeof(cPushID));
-                    pnet->NET_SetTutkUID(&pTutkCfg, 1);
-
-                    if (iConnect)
-                    {
-                        pnet->NET_SetConnectStringOnly(authInfo.struP2PConnectInfo);
-                    }
-                }
-                else if(2 == iResult)
-                {
-                    ;
-                }
-                else if(3 == iResult)
-                {
-                    pnet->m_iApplyStatus = 3;
-                }
-                else if(4 == iResult)
-                {
-                 pnet->m_iApplyStatus = 4;
-                 pnet->m_iApplyErrCode = 1009;
-                }
-                else
-                {
-                    pnet->m_iApplyStatus = 2;
-                }
-                
-                pHttpClient->UnInitialize();
-        }
-
-        pnet->m_iApplyFromSFlag = 0;
-
-        if (pHttpClient)
-        {
-            delete pHttpClient;
-            pHttpClient = NULL;
-        }
-	}
-	return NULL;
-}
-#endif
-
 /* 检测当前网络是否可以连接互联网(conn_status=1表示可以联通互联网) */
 int INet::Net_CheckIfNetAccessToInternet(int *conn_status)
 {
@@ -4947,21 +4324,6 @@ int INet::Net_CheckIfNetAccessToInternet(int *conn_status)
         NET_ERR("NULL POINTER EXCEPTION!\n");
         return -1;
     }
-
-#ifdef __MODULE_4G_SUPPORT__
-    if (bSupportGPRS)
-    {
-    	if (2 == m_nCurrNetCardType)
-        {
-    		if (0 != Module4G_GetModuleInternetConnStatus(conn_status))
-    		{
-    			*conn_status = 0;
-    		}
-
-    	    return 0;
-        }
-    }
-#endif 
 
     char net_card[16] = {0};
 
@@ -9902,14 +9264,13 @@ void INet::Release()
 void* OperateRouterThread(void * lParam)
 {
     PRT_TID();
-	NET_DBG(">>>>>>>>>> enter, pid = %d\n", getpid());
-	BEGINRUN_THREAD;
+    NET_DBG(">>>>>>>>>> enter, pid = %d\n", getpid());
 
-	//获取当前实例
-	INet *pNet = (INet *)lParam;
+    //获取当前实例
+    INet *pNet = (INet *)lParam;
 
-	if (NULL != pNet)
-	{
+    if (NULL != pNet)
+    {
 #ifdef __MODULE_4G_SUPPORT__	
         if (bSupportGPRS)
         {
@@ -9920,17 +9281,16 @@ void* OperateRouterThread(void * lParam)
         {
        	    pNet->OperateRouterThreadProcess();	
         }
-	}
-	else
-	{
-		NET_ERR("get pNet instance fail\n");
-		NET_CHK(NULL != pNet);
-	}
+    }
+    else
+    {
+        NET_ERR("get pNet instance fail\n");
+        NET_CHK(NULL != pNet);
+    }
 
-	NET_DBG(">>>>>>>>>> exit, pid = %d\n", getpid());
-	ENDRUN_THREAD;
+    NET_DBG(">>>>>>>>>> exit, pid = %d\n", getpid());
 
-	return NULL;
+    return NULL;
 }
 
 /*@breif ParseDnsAddr 解析DNS地址
@@ -10609,7 +9969,6 @@ void* SendWifiTestCommandThread(void *lParam)
     pthread_detach(pthread_self());
 
     NET_DBG(">>>>>>>>>> enter, pid = %d\n", getpid());
-    BEGINRUN_THREAD;
 
     //获取当前实例
     INet *pNet = (INet *)lParam;
@@ -10623,7 +9982,6 @@ void* SendWifiTestCommandThread(void *lParam)
         NET_CHK(NULL != pNet);
     }
     NET_DBG(">>>>>>>>>> exit, pid = %d\n", getpid());
-    ENDRUN_THREAD;
 
     return NULL;
 }
@@ -12764,24 +12122,23 @@ NET_INFO("New ===============================\n\
             NET_SetWifiMode(1, 0);
             NET_INFO("check wifi config: ssid=%s, key=%s\n", pConnection->szSSID, pConnection->struKeyCfg.WPAKey.szKey);
             XTRACE_MUTEX_UNLOCK(&m_SetWifiConnectLock);
-            MPU_LCD_SetDevBindConnetStatus(0);
-			int counter = 0;
-			ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECTING);
+            int counter = 0;
+            ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECTING);
 
-			//循环查询，等待播放结束
-			while(1)
-			{
-				SelectSleepSec(1);
-				if (0 == ZWSys_GetSpeechPlayingStatus())
-				{
-					break;
-				}
-				if (++counter > SPEECH_PLAY_TIME_OUT_SEC)
-				{
-					counter = 0;
-					break;
-				}
-			}						
+            //循环查询，等待播放结束
+            while (1)
+            {
+                SelectSleepSec(1);
+                if (0 == ZWSys_GetSpeechPlayingStatus())
+                {
+                    break;
+                }
+                if (++counter > SPEECH_PLAY_TIME_OUT_SEC)
+                {
+                    counter = 0;
+                    break;
+                }
+            }
             return 0;
         }
     }
@@ -13237,19 +12594,18 @@ int INet::WLAN_CheckStatus()
             {
                 if (m_fromApToStaConnectTick++ > 15)
                 {
-					saveConnectSuccess(0);
-                    MPU_LCD_SetDevBindConnetStatus(3);
- 					//新版本语音没有密码错误的类型
-					int failReason = 0;
-					ret = get_wifi_fail_reason(&failReason);  /* 获取失败原因 */
-					if((0 == ret) && (failReason))
-					{
-						ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECT_FAIL_PWD_WRONG);
-					}
-					else
-					{
-						ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECT_FAIL);
-					}
+                    saveConnectSuccess(0);
+                    //新版本语音没有密码错误的类型
+                    int failReason = 0;
+                    ret = get_wifi_fail_reason(&failReason); /* 获取失败原因 */
+                    if ((0 == ret) && (failReason))
+                    {
+                        ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECT_FAIL_PWD_WRONG);
+                    }
+                    else
+                    {
+                        ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECT_FAIL);
+                    }
 
                     //循环查询，等待播放结束
                     while(1)
@@ -13426,8 +12782,7 @@ int INet::WLAN_CheckStatus()
             {
 				saveConnectSuccess(1);
                 NET_INFO("AP -> STA SPEECH_WIFI_CONNECT_SUCCESS\n");
-                MPU_LCD_SetDevBindConnetStatus(1);
-            	ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECT_SUCCESS);
+                ZWSys_SetSpeechContent(SPEECH_WIFI_CONNECT_SUCCESS);
                 m_wifiToStaFlag = 0;
                 m_fromApToStaConnectTick = 0;
                 m_wifiApToStaCfgOver = 0;

@@ -12,7 +12,6 @@
 #include "global_macro.h"
 #include "debug.h"
 #include "idvr_errno.h"
-#include "macro_pthread.h"
 #include "CIP2PasswdResume.h"
 // #include "sys_banned.h"
 #include "global_gather.h"
@@ -111,11 +110,10 @@ void *CIP2PasswdResume::work_thread(void *org)
 	{
 		CSYS_ERR("实例未创建，无法进行检测\n");
 		return NULL;
-	}
-	BEGINRUN_THREAD;
+    }
 
-	while (handle->bWorkTrheadRun)
-	{
+    while (handle->bWorkTrheadRun)
+    {
 		ZWSys_GetResetPinStatus(&ret);
 		//ret = 0;
 		//CSYS_INF("ret = %d\n", ret);
@@ -156,9 +154,8 @@ void *CIP2PasswdResume::work_thread(void *org)
 		}
 	}
 	CSYS_INF("复位工作线程退出\n");
-	sem_post(&cond);
-	ENDRUN_THREAD;
-	return NULL;
+    sem_post(&cond);
+    return NULL;
 }
 
 //!\brief 开始复位检测

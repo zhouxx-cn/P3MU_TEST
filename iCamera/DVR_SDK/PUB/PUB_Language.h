@@ -1,8 +1,10 @@
 #ifndef PUB_LANGUAGE_H__
 #define PUB_LANGUAGE_H__
 
-#include "../MPU/MPU_global.h"
 #include <string.h>
+#include "newhie/HieServer_Common.h"
+#include "newhie/HieServer_Cfg.h"
+#include "zwsdk.h"
 
 #define SPEENC_LANGUAGE_PATH "/mnt/app/custom/speech"
 

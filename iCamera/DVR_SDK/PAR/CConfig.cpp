@@ -15,31 +15,14 @@
 #include <string.h>
 #include <limits.h>
 
-//#include "libxml/parser.h"
-//#include "libxml/tree.h"
 #include "global_macro.h"
 #include "CConfig.h"
-#include "RNL/idvr_rnl.h"
 #include "Authority.h"
-#ifndef NDEBUG
-#include <sys/time.h>
-#include <time.h>
-#endif
+#include "LogManager.h"
 
-#define PAR_LOG(level, x...) \
-	do {\
-	char buf[512];\
-	snprintf(buf, sizeof(buf), x);\
-	idvr_rnl_log(level, "PAR", "[%s line %d] %s", __FILE__, __LINE__, buf);\
-	} while (0)
-
-#define PAR_DBG(x...) //IDVR_RNL_DEBUG("PAR", "[%s:%d]", __FILE__, __LINE__);IDVR_RNL_DEBUG("PAR", x);
-#define PAR_INFO(x...) PAR_LOG(LOG_LEVEL_INFO, x)
-#define PAR_ERROR(x...) PAR_LOG(LOG_LEVEL_ERROR, x)
-
-#ifndef PATH_MAX
-#include <dirent.h>
-#endif
+#define PAR_DBG(format...) LOG_D(LOG_MODULE_OPEN, format)
+#define PAR_INFO(format...) LOG_I(LOG_MODULE_OPEN, format)
+#define PAR_ERROR(format...) LOG_E(LOG_MODULE_OPEN, format)
 
 struct CConfig::tagSection
 {

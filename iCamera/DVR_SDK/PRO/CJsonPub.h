@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include "CProManager.h"
 #include "LogManager.h"
-#include "MPU_PUB_API.h" 
 #include "DEVICEVERSION.h"
 
 #define FORMAT_ERR_MESSAGE      "JSON Format Error!"

@@ -5,15 +5,14 @@
 #include <sys/time.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include "LogManager.h"
 #include "mxml.h"
 #include "mysystem.h"
 #include "global_macro.h"		//全工程宏定义
-#include "newhie/HieServer.h"	//网络SDK
-#include "MPU_AVL_API.h"
-#include "MPU_PAR_API.h"
-#include "MPU/MPU_CIU_global.h"
+#include "newhie/HieServer.h"   //网络SDK
 #include "common_pub.h"
 #include "CConfig.h"
+#include "wifi_api.h"
 #include "zwsdk.h"
 #include "mauth.h"
 #include "../PAR/CPubFunc.h"
@@ -21,8 +20,6 @@
 
 static char s_DeviceUUID[64] = {0};
 static const char *g_UUIDInValid= "FFFFFFFFFFFFFFFF";
-
-static pthread_mutex_t m_MjpegLock = PTHREAD_MUTEX_INITIALIZER;
 
 struct QRRunInfo {
   int qrscan_enable;
@@ -827,129 +824,8 @@ int SetDevInitOverFlag(int flag)
  */
 int GetMjpegBuffer(int mode, int nChn, char **pBuffer, int *pLength, int maxLength, long long *pTimestampMs)
 {
-#ifdef __USE_CIRCLEQUEUE__
-	int nRet = 0;
-	PullRealStreamInterface MjpegStreamInterface = {0};
-	DWORD ConnectionId = 0;
-	RealStreamMedia realStreamMedia;
-
-    if (nChn >= MAX_CH_NUM)
-    {
-        printf("[%s][%d] GetMjpegBuffer fail! Chn=[%d]\n", __FUNCTION__, __LINE__, nChn);
-        return -1;
-    }
-
-	XTRACE_MUTEX_LOCK(&m_MjpegLock);
-
-	memset(&realStreamMedia, 0, sizeof(RealStreamMedia));
-	if(CIU_GetMjpegStreamCircleQueueInterface(&MjpegStreamInterface) < 0)
-	{
-		return -1;
-	}
-	nRet = MjpegStreamInterface.ifRealStreamConnectionAdd(eProtocolBegin, 0, nChn, eMediaCodefourthStream, NULL, &ConnectionId);
-	if (!nRet)
-	{
-		nRet = MjpegStreamInterface.ifRealStreamConnectionGetData(ConnectionId, &realStreamMedia, NULL);
-		if (!nRet)
-		{
-			if (realStreamMedia.cBuffer.dwBufLen > 28 && realStreamMedia.cBuffer.dwBufLen - 28 <= (unsigned int)maxLength)
-			{
-				if (1 == mode)
-				{
-					*pBuffer = (char *)malloc(realStreamMedia.cBuffer.dwBufLen - 28);
-					if (NULL == *pBuffer)
-					{
-						printf("[%s][%d] buffer malloc size (%lu) failed!\n", __FUNCTION__, __LINE__, realStreamMedia.cBuffer.dwBufLen - 28);
-						goto ReleaseData;
-					}
-				}
-
-				if (*pBuffer)
-				{
-					memcpy(*pBuffer, realStreamMedia.cBuffer.pBuffer + 28, realStreamMedia.cBuffer.dwBufLen - 28);
-					*pLength = realStreamMedia.cBuffer.dwBufLen - 28;
-				}
-				else
-				{
-					printf("[%s][%d] buffer is null\n", __FUNCTION__, __LINE__);
-					goto ReleaseData;
-				}
-			}
-			else
-			{
-				printf("[%s][%d]get mjpeg frame length=%lu error! max length is %d!\n", __FUNCTION__, __LINE__, realStreamMedia.cBuffer.dwBufLen, maxLength);
-				goto ReleaseData;
-			}
-
-			if (pTimestampMs)
-			{
-				// 时间戳赋值
-				struct tm datetime;
-				datetime.tm_year = realStreamMedia.cTime.wYear - 1900;
-				datetime.tm_mon = realStreamMedia.cTime.wMonth - 1;
-				datetime.tm_mday = realStreamMedia.cTime.wDay;
-				datetime.tm_hour = realStreamMedia.cTime.wHour;
-				datetime.tm_min = realStreamMedia.cTime.wMinute;
-				datetime.tm_sec = realStreamMedia.cTime.wSecond;
-
-				// printf("%d-%d-%d %d:%d:%d\n", datetime.tm_year, datetime.tm_mon, datetime.tm_mday, datetime.tm_hour, datetime.tm_min, datetime.tm_sec);
-				// 将时间转换为时间戳(毫秒)
-				*pTimestampMs = (long long)((long long)mktime(&datetime) * 1000LL + realStreamMedia.cTime.wMillisecond);
-				// printf("timestamps=%lld\n", (long long)*pTimestampMs);
-			}
-
-			nRet = MjpegStreamInterface.ifRealStreamConnectionReleaseData(ConnectionId, &realStreamMedia, NULL);
-			if(nRet)
-			{
-				printf("[%s][%d]ifRealStreamConnectionReleaseData fail!\n", __FUNCTION__, __LINE__);
-				goto ConnectionDelete;
-			}
-		}
-		else
-		{
-			printf("[%s][%d]ifRealStreamConnectionGetData fail!\n", __FUNCTION__, __LINE__);
-			goto ConnectionDelete;
-		}
-
-		nRet = MjpegStreamInterface.ifRealStreamConnectionDelete(ConnectionId, NULL);
-		if (nRet)
-		{
-			printf("[%s][%d]ifRealStreamConnectionDelete fail!\n", __FUNCTION__, __LINE__);
-			XTRACE_MUTEX_UNLOCK(&m_MjpegLock);
-			return -1;
-		}
-	}
-	else
-	{
-		printf("[%s][%d]ifRealStreamConnectionAdd fail!\n", __FUNCTION__, __LINE__);
-		XTRACE_MUTEX_UNLOCK(&m_MjpegLock);
-		return -2;
-	}
-	XTRACE_MUTEX_UNLOCK(&m_MjpegLock);
-
-	return 0;
-
-ReleaseData:
-	nRet = MjpegStreamInterface.ifRealStreamConnectionReleaseData(ConnectionId, &realStreamMedia, NULL);
-	if (nRet)
-	{
-		printf("[%s][%d]ifRealStreamConnectionReleaseData fail!\n", __FUNCTION__, __LINE__);
-	}
-
-ConnectionDelete:
-	nRet = MjpegStreamInterface.ifRealStreamConnectionDelete(ConnectionId, NULL);
-	if (nRet)
-	{
-		printf("[%s][%d]ifRealStreamConnectionDelete fail!\n", __FUNCTION__, __LINE__);
-	}
-	XTRACE_MUTEX_UNLOCK(&m_MjpegLock);
-
-	return -3;
-#endif
-
-	return 0;
+    return 0;
 }
-
 
 /**
  * @brief 获取mjpeg buffer
@@ -963,106 +839,8 @@ ConnectionDelete:
  */
 int GetMjpegBuffer_V2(int mode, int nChn, char **pBuffer, int *pLength, int maxLength, long long *pTimestampMs)
 {
-#ifdef __USE_CIRCLEQUEUE__
-	int nRet = 0;
-	PullRealStreamInterface MjpegStreamInterface = {0};
-	static DWORD ConnectionId[SYSTEM_SUPPORT_CHANNEL] = {0};
-	RealStreamMedia realStreamMedia;
-
-    if (nChn >= MAX_CH_NUM)
-    {
-        printf("[%s][%d] GetMjpegBuffer fail! Chn=[%d]\n", __FUNCTION__, __LINE__, nChn);
-        return -1;
-    }
-
-	XTRACE_MUTEX_LOCK(&m_MjpegLock);
-
-	memset(&realStreamMedia, 0, sizeof(RealStreamMedia));
-	if(CIU_GetMjpegStreamCircleQueueInterface(&MjpegStreamInterface) < 0)
-	{
-		return -1;
-	}
-	if(ConnectionId[nChn] == 0)
-	nRet = MjpegStreamInterface.ifRealStreamConnectionAdd(eProtocolBegin, 0, nChn, eMediaCodefourthStream, NULL, &ConnectionId[nChn]);
-
-	if(nRet != 0)
-	{
-		printf("[%s][%d]ifRealStreamConnectionAdd fail!\n", __FUNCTION__, __LINE__);
-		XTRACE_MUTEX_UNLOCK(&m_MjpegLock);
-		return -2;
-	}
-	
-	nRet = MjpegStreamInterface.ifRealStreamConnectionGetData(ConnectionId[nChn], &realStreamMedia, NULL);
-	if (!nRet)
-	{
-		if (realStreamMedia.cBuffer.dwBufLen > 28 && realStreamMedia.cBuffer.dwBufLen - 28 <= (unsigned int)maxLength)
-		{
-			if (1 == mode)
-			{
-				*pBuffer = (char *)malloc(realStreamMedia.cBuffer.dwBufLen - 28);
-				if (NULL == *pBuffer)
-				{
-					printf("[%s][%d] buffer malloc size (%lu) failed!\n", __FUNCTION__, __LINE__, realStreamMedia.cBuffer.dwBufLen - 28);
-					goto ReleaseData;
-				}
-			}
-
-			if (*pBuffer)
-			{
-				memcpy(*pBuffer, realStreamMedia.cBuffer.pBuffer + 28, realStreamMedia.cBuffer.dwBufLen - 28);
-				*pLength = realStreamMedia.cBuffer.dwBufLen - 28;
-			}
-			else
-			{
-				printf("[%s][%d] buffer is null\n", __FUNCTION__, __LINE__);
-				goto ReleaseData;
-			}
-		}
-		else
-		{
-			printf("[%s][%d]get mjpeg frame length=%lu error! max length is %d!\n", __FUNCTION__, __LINE__, realStreamMedia.cBuffer.dwBufLen, maxLength);
-			goto ReleaseData;
-		}
-
-		if (pTimestampMs)
-		{
-			// 时间戳赋值
-			struct tm datetime;
-			datetime.tm_year = realStreamMedia.cTime.wYear - 1900;
-			datetime.tm_mon = realStreamMedia.cTime.wMonth - 1;
-			datetime.tm_mday = realStreamMedia.cTime.wDay;
-			datetime.tm_hour = realStreamMedia.cTime.wHour;
-			datetime.tm_min = realStreamMedia.cTime.wMinute;
-			datetime.tm_sec = realStreamMedia.cTime.wSecond;
-
-			// printf("%d-%d-%d %d:%d:%d\n", datetime.tm_year, datetime.tm_mon, datetime.tm_mday, datetime.tm_hour, datetime.tm_min, datetime.tm_sec);
-			// 将时间转换为时间戳(毫秒)
-			*pTimestampMs = (long long)((long long)mktime(&datetime) * 1000LL + realStreamMedia.cTime.wMillisecond);
-			// printf("timestamps=%lld\n", (long long)*pTimestampMs);
-		}
-
-		nRet = MjpegStreamInterface.ifRealStreamConnectionReleaseData(ConnectionId[nChn], &realStreamMedia, NULL);
-	}
-	else
-	{
-		printf("[%s][%d]ifRealStreamConnectionReleaseData fail!\n", __FUNCTION__, __LINE__);
-	}
-	
-	XTRACE_MUTEX_UNLOCK(&m_MjpegLock);
-	return 0;
-
-ReleaseData:
-	nRet = MjpegStreamInterface.ifRealStreamConnectionReleaseData(ConnectionId[nChn], &realStreamMedia, NULL);
-	if (nRet)
-	{
-		printf("[%s][%d]ifRealStreamConnectionReleaseData fail!\n", __FUNCTION__, __LINE__);
-	}
-#endif
-
-	XTRACE_MUTEX_UNLOCK(&m_MjpegLock);
-	return 0;
+    return 0;
 }
-
 
 /**
  * @brief 获取分区使用率
@@ -1231,8 +1009,8 @@ void RebootLinux(eRebootResult nResult)
     mysystem("dmesg");
 	mysystem("logcat &");
 
-    /* 重启之前，需要停止录像 */
-    MPU_AVI_StopRecordAndUinitMemRecord(0);
+    /* TODO: 重启之前，需要停止录像 */
+
     CConfig *pConfig = CConfig::GetInstance();
     if (NULL != pConfig)
     {

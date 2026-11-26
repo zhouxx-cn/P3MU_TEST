@@ -28,8 +28,7 @@
 #include "ui_input.h"
 
 /* 子码流循环缓冲区取流接口(SDK) */
-#include "MemRecord.h"       /* RecordInterface */
-#include "MPU_CIU_Preview.h" /* CIU_GetSubStreamRecordInterface */
+#include "MemRecord.h" /* RecordInterface */
 
 /* openh264 解码器 */
 #include "codec_api.h"
@@ -133,80 +132,80 @@ static void tc_i420_to_nv12(unsigned char *yuv[3], const int stride[3], int w, i
 /* ======================= 4) 子码流取流 + 解码 + 送显线程 ======================= */
 static void *tc_stream_thread(void *arg)
 {
-    RecordInterface tIf;
-    unsigned int conn = 0;
-    unsigned int seq = 0;
+    // RecordInterface tIf;
+    // unsigned int conn = 0;
+    // unsigned int seq = 0;
 
-    (void)arg;
+    // (void)arg;
 
-    memset(&tIf, 0, sizeof(tIf));
-    if (0 != CIU_GetSubStreamRecordInterface(&tIf) || NULL == tIf.ifRecordUserAdd || NULL == tIf.ifRecordGetData ||
-        NULL == tIf.ifRecordReleaseData || NULL == tIf.ifRecordUserDelete)
-    {
-        UI_LOGE("get sub-stream record interface failed");
-        return NULL;
-    }
+    // memset(&tIf, 0, sizeof(tIf));
+    // if (0 != CIU_GetSubStreamRecordInterface(&tIf) || NULL == tIf.ifRecordUserAdd || NULL == tIf.ifRecordGetData ||
+    //     NULL == tIf.ifRecordReleaseData || NULL == tIf.ifRecordUserDelete)
+    // {
+    //     UI_LOGE("get sub-stream record interface failed");
+    //     return NULL;
+    // }
 
-    /* 添加循环缓冲区消费者(通道0, 0xff=所有码流, SDK 内部仅回子码流视频帧) */
-    if (0 != tIf.ifRecordUserAdd(0, 0xff, &conn))
-    {
-        UI_LOGE("add circlequeue user failed");
-        return NULL;
-    }
+    // /* 添加循环缓冲区消费者(通道0, 0xff=所有码流, SDK 内部仅回子码流视频帧) */
+    // if (0 != tIf.ifRecordUserAdd(0, 0xff, &conn))
+    // {
+    //     UI_LOGE("add circlequeue user failed");
+    //     return NULL;
+    // }
 
-    UI_LOGI("thumbcam stream thread running");
+    // UI_LOGI("thumbcam stream thread running");
 
-    while (s_run)
-    {
-        char *pStream = NULL;
-        unsigned int nLen = 0;
-        int r = tIf.ifRecordGetData(conn, &pStream, &nLen);
+    // while (s_run)
+    // {
+    //     char *pStream = NULL;
+    //     unsigned int nLen = 0;
+    //     int r = tIf.ifRecordGetData(conn, &pStream, &nLen);
 
-        if (0 != r)
-        {
-            /* -2:无数据  -3:非子码流帧(已释放)  -1:异常 */
-            if (-2 == r)
-            {
-                usleep(10 * 1000);
-            }
-            continue;
-        }
+    //     if (0 != r)
+    //     {
+    //         /* -2:无数据  -3:非子码流帧(已释放)  -1:异常 */
+    //         if (-2 == r)
+    //         {
+    //             usleep(10 * 1000);
+    //         }
+    //         continue;
+    //     }
 
-        /* H264 -> I420 */
-        if (NULL != s_decoder && NULL != pStream && nLen > 0)
-        {
-            unsigned char *pDst[3] = {NULL, NULL, NULL};
-            SBufferInfo sDstInfo;
-            DECODING_STATE st;
+    //     /* H264 -> I420 */
+    //     if (NULL != s_decoder && NULL != pStream && nLen > 0)
+    //     {
+    //         unsigned char *pDst[3] = {NULL, NULL, NULL};
+    //         SBufferInfo sDstInfo;
+    //         DECODING_STATE st;
 
-            memset(&sDstInfo, 0, sizeof(sDstInfo));
-            st = (*s_decoder)->DecodeFrame2(s_decoder, (const unsigned char *)pStream, (int)nLen, pDst, &sDstInfo);
+    //         memset(&sDstInfo, 0, sizeof(sDstInfo));
+    //         st = (*s_decoder)->DecodeFrame2(s_decoder, (const unsigned char *)pStream, (int)nLen, pDst, &sDstInfo);
 
-            if (0 == st && 1 == sDstInfo.iBufferStatus && NULL != pDst[0] && NULL != pDst[1] && NULL != pDst[2])
-            {
-                int w = sDstInfo.UsrData.sSystemBuffer.iWidth;
-                int h = sDstInfo.UsrData.sSystemBuffer.iHeight;
+    //         if (0 == st && 1 == sDstInfo.iBufferStatus && NULL != pDst[0] && NULL != pDst[1] && NULL != pDst[2])
+    //         {
+    //             int w = sDstInfo.UsrData.sSystemBuffer.iWidth;
+    //             int h = sDstInfo.UsrData.sSystemBuffer.iHeight;
 
-                if (TC_W == w && TC_H == h)
-                {
-                    int stride[3];
-                    stride[0] = sDstInfo.UsrData.sSystemBuffer.iStride[0];
-                    stride[1] = sDstInfo.UsrData.sSystemBuffer.iStride[1];
-                    stride[2] = sDstInfo.UsrData.sSystemBuffer.iStride[1];
+    //             if (TC_W == w && TC_H == h)
+    //             {
+    //                 int stride[3];
+    //                 stride[0] = sDstInfo.UsrData.sSystemBuffer.iStride[0];
+    //                 stride[1] = sDstInfo.UsrData.sSystemBuffer.iStride[1];
+    //                 stride[2] = sDstInfo.UsrData.sSystemBuffer.iStride[1];
 
-                    tc_i420_to_nv12(pDst, stride, w, h, s_nv12);
+    //                 tc_i420_to_nv12(pDst, stride, w, h, s_nv12);
 
-                    /* 推给 UI 框架(线程安全), UI 线程合成后送 LCD */
-                    ui_video_refresh(UI_PIX_NV12, s_nv12, TC_NV12_SIZE, (uint16_t)TC_W, (uint16_t)TC_H, seq++);
-                }
-            }
-        }
+    //                 /* 推给 UI 框架(线程安全), UI 线程合成后送 LCD */
+    //                 ui_video_refresh(UI_PIX_NV12, s_nv12, TC_NV12_SIZE, (uint16_t)TC_W, (uint16_t)TC_H, seq++);
+    //             }
+    //         }
+    //     }
 
-        tIf.ifRecordReleaseData(conn, pStream, nLen);
-    }
+    //     tIf.ifRecordReleaseData(conn, pStream, nLen);
+    // }
 
-    tIf.ifRecordUserDelete(conn);
-    UI_LOGI("thumbcam stream thread exit");
+    // tIf.ifRecordUserDelete(conn);
+    // UI_LOGI("thumbcam stream thread exit");
     return NULL;
 }
 

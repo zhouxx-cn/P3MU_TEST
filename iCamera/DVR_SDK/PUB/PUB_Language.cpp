@@ -1,4 +1,9 @@
 #include "PUB_Language.h"
+#include "CConfig.h"
+#include "LogManager.h"
+#include "global_FilePath.h"
+#include <dirent.h>
+#include <unistd.h>
 
 #define DEBUG
 
@@ -296,7 +301,7 @@ int PUB_SetVoiceLanguage(HY_DVR_VOICE_BROADCAST_LANGUAGE *pcfg)
     if(eSpeechLanguage_Chinese != value)
     {
         //语言被定制了
-        MPU_ERR("Language has been customed!");
+        OPEN_LOG_E("Language has been customed!");
         return eErrorLanguageTypeIsCustomized;
     }
 

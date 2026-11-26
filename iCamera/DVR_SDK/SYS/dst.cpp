@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include "CConfig.h"
 #include "global_macro.h"
-#include "macro_pthread.h"
 #include "pthreadmacro.h"
 #include "tagTime.h"
 //#include <iostream.h>

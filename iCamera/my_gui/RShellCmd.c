@@ -25,9 +25,7 @@
 #include "LogManager.h"
 #include "zwsdk.h"
 #include "DEVICEVERSION.h"
-#include "MPU_PUB_API.h"
 #include "Authority.h"
-#include "MPU_LCD_API.h"
 
 typedef void (*SHELL_CMD_FUNC)(int argc,char * argv[]);
 
@@ -143,9 +141,8 @@ void shell_cmd_get_version(int argc, char * argv[])
 {
     //获取设备版本信息
     DEVICEVERSION dv = {0};
-    MPU_PUB_GetDeviceVersion(&dv,0);
-	OPEN_LOG_I("**********************************\n");
-	OPEN_LOG_I("FW compile date =[%s %s]\n", __DATE__, __TIME__);
+    OPEN_LOG_I("**********************************\n");
+    OPEN_LOG_I("FW compile date =[%s %s]\n", __DATE__, __TIME__);
 	OPEN_LOG_I("  m_szHardwareVersion = [%s]\n", dv.m_szHardwareVersion);
 	OPEN_LOG_I("  m_szSoftwareVersion = [%s]\n", dv.m_szSoftwareVersion);
 	OPEN_LOG_I("  m_szDspVersion      = [%s]\n", dv.m_szDspVersion);
@@ -159,19 +156,9 @@ void shell_cmd_print_authinfo(int argc,char * argv[])
 	OPEN_LOG_I("show authinfo\n");
 }
 
-void shell_cmd_print_lcdinfo(int argc,char * argv[])
-{
-    MPU_LCD_DumpInfo();
-}
-
-const ShellCmdTblInfo sShellCmdTbl[] = 
-{
-	{"log_enable",				shell_set_log_enable},
-	{"log_level",				shell_set_log_level},
-	{"log_module",				shell_set_log_module},
-	{"getVersion",				shell_cmd_get_version},
-    {"authinfo",				shell_cmd_print_authinfo},
-    {"lcdinfo",				    shell_cmd_print_lcdinfo},
+const ShellCmdTblInfo sShellCmdTbl[] = {
+    {"log_enable", shell_set_log_enable},  {"log_level", shell_set_log_level},     {"log_module", shell_set_log_module},
+    {"getVersion", shell_cmd_get_version}, {"authinfo", shell_cmd_print_authinfo},
 };
 
 void createShellCmdSymLink(void)

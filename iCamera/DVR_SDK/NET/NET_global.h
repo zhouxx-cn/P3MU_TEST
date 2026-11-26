@@ -5,13 +5,10 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "RNL/idvr_rnl.h"
 #include "PUB/global_macro.h"
-#include "PUB/macro_pthread.h"
 #include "newhie/HieServer.h"
 #include "newhie/ZWHosts.h"
 #include "newhie/ZWHostsCommon.h"
-#include "AVL/CActionAlarm.h"
 #include "LogManager.h"
 
 #define NET_ERR(format...)        LOG_E(LOG_MODULE_NET,format)

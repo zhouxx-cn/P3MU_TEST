@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "CProManager.h"
 #include "cJSON.h"
 #include "string.h"
@@ -7,11 +9,9 @@
 #include "CJsonLightTest.h"
 #include "CJsonSys.h"
 #include "CJsonDap.h"
-#include "./MPU/MPU_global.h"
 #include "CJsonPub.h"
 // #include "sys_banned.h"
 #include "global_gather.h"
-
 
 #define CHECK_POINT_NULL_SPECIAL_RETURN_VALUE_WITH_STR(x,return_value,str)\
 {\
@@ -368,18 +368,10 @@ static int ProductToolGetConfig(int nMaincmd, int nAssistCmd)
 	{
 		case eStartTest:
 		{
-			int  nStatus = 0;
-            nStatus = MPU_SYS_SetProductTestMode(1);
-            ZWSys_SetProductMode(1);
-			if(access("/data/config/config/noSupportShare",F_OK) == 0)  //产测时会下发该命令，用于删除产测拉流时误增加的文件
-			{
-				printf("[%s:%d] ProductTest need detlet 'noSupportShare' \n",__FILE__, __LINE__);
-				int RmRet = remove("/data/config/config/noSupportShare");
-				if(RmRet != 0)
-				printf("[%s:%d] ProductTest delet 'noSupportShare' fail [%d]!\n",__FILE__, __LINE__,RmRet);
-			}	
-			nRet = Json_StartTest(s_RespondBuff, sizeof(s_RespondBuff), nStatus);
-		}
+            int nStatus = -1;
+            JSON_ERROR("eStartTest fail\n");
+            nRet = Json_StartTest(s_RespondBuff, sizeof(s_RespondBuff), nStatus);
+        }
 		break;
 		case eHardReset:
 		{

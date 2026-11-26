@@ -1,6 +1,5 @@
 #include <pthread.h>
 #include "CConfig.h"
-#include "macro_pthread.h"
 #include "pthreadmacro.h"
 #include "mysystem.h"
 //#include "newhie/HieServer_Cfg.h"

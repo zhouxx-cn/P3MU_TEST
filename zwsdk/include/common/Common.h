@@ -988,8 +988,7 @@ typedef struct
 #if (USE_ALGO)
     ThreadInfo_t		m_HDThread;
 #endif
-    ThreadInfo_t        m_DrawLineThread;
-    ThreadInfo_t        m_MiscTaskThread;               //杂项任务线程
+    ThreadInfo_t m_DrawLineThread;
     ThreadInfo_t        m_SlowFrameModeSwitchThread;    //切换低帧模式线程
     
 #if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__)

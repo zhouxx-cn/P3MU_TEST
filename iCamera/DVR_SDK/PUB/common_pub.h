@@ -6,7 +6,7 @@
  *
  */
 #include <stdbool.h>
-
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C"
