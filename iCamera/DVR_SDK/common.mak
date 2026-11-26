@@ -88,9 +88,6 @@ endif
 ifeq ($(IS_SUPPORT_SMARTP),yes)
 CFLAGS += -D__DIGITAL_SUPPORT_SMARTP__
 endif
-ifeq ($(IS_SUPPORT_ZOOM),yes)
-CFLAGS += -D__DIGITAL_ZOOM_DRAG_SUPPORT__
-endif
 ifeq ($(SUPPORT_SD_CARD),yes)
 CFLAGS += -D__SUPPORT_SD_CARD__
 else

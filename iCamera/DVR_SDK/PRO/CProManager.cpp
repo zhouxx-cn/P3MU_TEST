@@ -7,7 +7,6 @@
 #include "CJsonLightTest.h"
 #include "CJsonSys.h"
 #include "CJsonDap.h"
-#include "CJsonPtzControl.h"
 #include "./MPU/MPU_global.h"
 #include "CJsonPub.h"
 // #include "sys_banned.h"
@@ -370,8 +369,7 @@ static int ProductToolGetConfig(int nMaincmd, int nAssistCmd)
 		case eStartTest:
 		{
 			int  nStatus = 0;
-			nStatus = MPU_SYS_SetProductTestMode(1);
-            nStatus |= MPU_PTZ_SetProductTestMode(1);
+            nStatus = MPU_SYS_SetProductTestMode(1);
             ZWSys_SetProductMode(1);
 			if(access("/data/config/config/noSupportShare",F_OK) == 0)  //产测时会下发该命令，用于删除产测拉流时误增加的文件
 			{
@@ -409,14 +407,9 @@ static int ProductToolGetConfig(int nMaincmd, int nAssistCmd)
 		{
 			nRet = Json_TryListenAlaramAudio(s_RespondBuff, sizeof(s_RespondBuff), eTryListemAlarmAudio);
 		}
-		break;
-		case ePtzControl:
-		{
-			nRet = Json_PtzControlTest(s_RespondBuff, sizeof(s_RespondBuff), ePtzControl);
-		}
-		break;
-		case eRedLightTest:
-		{
+        break;
+        case eRedLightTest:
+        {
 			nRet = Json_RedLightTest(s_RespondBuff, sizeof(s_RespondBuff), eRedLightTest);
 		}
 		break;
@@ -424,18 +417,13 @@ static int ProductToolGetConfig(int nMaincmd, int nAssistCmd)
 		{
 			nRet = Json_WhiteLightTest(s_RespondBuff, sizeof(s_RespondBuff), eWhiteLightTest);
 		}
-		break;
-		case eAlarmOut:
-		{
-			nRet = Json_AlarmOut(s_RespondBuff, sizeof(s_RespondBuff), eAlarmOut);
-		}
-		break;
-		case eSdFormat:
-		{
-			nRet = Json_SdFormat(s_RespondBuff, sizeof(s_RespondBuff), eSdFormat); 
-		}
-		break;
-		case eFactoryDefault:
+        break;
+        case eSdFormat:
+        {
+            nRet = Json_SdFormat(s_RespondBuff, sizeof(s_RespondBuff), eSdFormat);
+        }
+        break;
+        case eFactoryDefault:
 		{
 			nRet = Json_FactoryDefault(s_RespondBuff, sizeof(s_RespondBuff), eFactoryDefault);
 		}

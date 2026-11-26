@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-MODS:=mysystem Authorize AVL COM DOP NET OPL PAR PTZ PUB RNL SYS USR MPU STR SnapShot PRO LCD PUB_BORAD ui ThumbCamDemo
+MODS:=mysystem Authorize AVL COM NET OPL PAR PUB RNL SYS USR MPU STR SnapShot PRO PUB_BORAD ui ThumbCamDemo
 
 .PHONY:release clean
 

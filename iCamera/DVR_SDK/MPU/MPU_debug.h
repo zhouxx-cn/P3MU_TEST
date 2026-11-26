@@ -41,7 +41,7 @@
 #else
 //#define DEBUG_NOT_USE_STR_LIB
 //#define DEBUG_NOT_USE_SNP_LIB
-#define DEBUG_NOT_USE_DIP_LIB	//调试时，不调用DIP库
+#define DEBUG_NOT_USE_DOP_LIB //调试时，不调用DIP库
 #endif
 
 #ifdef USE_ICAMERA

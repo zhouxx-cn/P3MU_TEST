@@ -53,11 +53,6 @@
 #include "PUB_BoradInfo.h"
 #include "MPU_SYS_API.h"
 
-#ifdef __AGINGTEST__
-/* 云台控制相关 */
-#include "PTZ/CPtzManager.h"
-#include "motoLib.h"
-#endif
 #ifdef __IS_SUPPORT_AIC_BLUETOOTH__
 #include "XRSBLE_L2.h"
 #endif
@@ -66,12 +61,6 @@ extern "C"
 {
     #include "xtrace.h"
 }
-
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-/* 云台控制相关 */
-#include "PTZ/CPtzManager.h"
-#include "motoLib.h"
-#endif
 
 #include "../PAR/CPubFunc.h"
 
@@ -1435,8 +1424,6 @@ int Mytest_Analysis_CfgFileAndAbilityFile_Callback(const char* Aims_pach, const 
     }
     CConfig::ReleaseInstance(pCustomCfg);
     pCustomCfg = NULL;
-    //设置云台速度上限
-    MOTO_SetSpeedMax(nSpeedHmax, MOTO_SPEED_V_MAX);
     return 0;
 }
 
@@ -2292,48 +2279,6 @@ static void aging_test_ircut()
     }
 }
 
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-//云台老化测试
-static void aging_test_ptz()
-{
-    static int cmd[4]  = {0};
-    int ch = 0, nHMax = 0, nVMax = 0;
-    int nX = 0, nY = 0;
-
-    CPtzManager *pPtz = CPtzManager::PTZ_GetInstance ();
-    for(int i = 0; i < 4; i++)
-    {
-        if (i == 1) {
-            continue;
-        }
-        pPtz->PTZ_GetMaxStep(i, &nHMax, &nVMax);
-
-        if (PTZ_TOPOS_VMIN_HMIN == cmd[i])
-        {
-            nX = 0;
-            nY = 0;
-            cmd[i] = PTZ_TOPOS_VMAX_HMAX;
-        }
-        else if (PTZ_TOPOS_VMAX_HMAX == cmd[i])
-        {
-            nX = nHMax;
-            nY = nVMax;
-            cmd[i] = PTZ_TOPOS_VMIN_HMIN;
-        }
-        MOTO_ToPos_AgingTest(nX, nY, i);
-    }
-
-    /* 记录最新的位置（避免跑走了） */
-    char szSectionName[64] = {};
-    snprintf(szSectionName, sizeof(szSectionName), "PTZ_Set_%d", ch);
-
-    CConfig *pConfig = CConfig::GetInstance();
-    pConfig->SetValue(szSectionName, "HorizontalAngle", nX);
-    pConfig->SetValue(szSectionName, "VerticalAngle", nY);
-    pConfig->SaveFile();
-}
-#endif
-
 void* start_aging_test( void *param)
 {
     PRT_TID();
@@ -2369,25 +2314,12 @@ void* start_aging_test( void *param)
     MPU_AVL_AreaDefense_Motion_Enable(0, 0);
     MPU_AVL_AreaDefense_HumanShape_Enable(0, 0);
 
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-    //设置老化测试云台速度(默认最大速度)
-    MPU_PTZ_SetSpeed(g_init_params.ptz_speed, 0);
-#endif
-
     while (1)
     {
         //ircut
         if ((1 == g_init_params.ir_cut_enable) && (0 == time_interval % g_init_params.ir_cut_time))
         {
             aging_test_ircut();
-        }
-
-        //ptz
-        if((1 == g_init_params.ptz_enable) && (0 == time_interval % g_init_params.ptz_time))
-        {
-        #if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-            aging_test_ptz();
-        #endif
         }
 
          //audio out
@@ -3124,8 +3056,6 @@ int QrScanCallback(unsigned char *pDataBuf, unsigned int uiDataLen)
 void InitDeviceCapacity()
 {
     g_tGuiState.iEncodeCh = MPU_AVL_GetChNum();
-    g_tGuiState.iAlarmInNum = MPU_DIP_GetPortNum();
-    g_tGuiState.iAlarmOutNum = MPU_DOP_GetPortNum();
 }
 
 int EncChNum()
@@ -3216,8 +3146,6 @@ int Halt(DWORD dwRemoteUserID, DWORD nHaltType)
         MPU_AVL_Record_Pause(nEncID, TRUE);
     }
 
-    MPU_PTZ_SetEletronicProp(0, ePropreboot, 0);
-
     if (eHalt != eOperation)
     {
         MPU_SYS_Reboot_safe();
@@ -3243,78 +3171,6 @@ void Maintenance_Cb()
         PAR_ForbiddenSaveFile();
         Halt((DWORD) LOCAL_USER_ID, (DWORD) eReboot);
     }
-}
-
-//!\brief 休眠唤醒或唤醒计划回调函数
-void AwakeSchedule_Cb(int AwakeMode)
-{
-    // 睡眠需要联动功能项：云台、移动追踪、告警及播报、隐私遮挡
-    MAIN_LOG_I("----- Into AwakeSchedule_Cb: %d -----\n", AwakeMode);
-
-    static EventDevSleepState Edata = {0};
-    Edata.dwID++;
-
-    if (AwakeMode)
-    {
-        // 执行唤醒相关动作
-        MPU_AVL_UpdateDorStatus(0);		// 解除移动、人形、追踪屏蔽
-        MPU_PTZ_UpdateDorStatus(0);
-        MPU_STR_Disk_ResumeSdRecord();
-        ZWSys_SetDormancyState(0);
-        Edata.nStatus = 1;
-    }
-    else
-    {
-        // 执行休眠相关动作
-        MPU_AVL_UpdateDorStatus(1);		// 开启屏蔽移动、人形、追踪
-        MPU_PTZ_UpdateDorStatus(1);
-        ZWSys_SetDormancyState(1);
-        MPU_STR_Disk_PauseSdRecord();
-        Edata.nStatus = 0;
-    }
-}
-
-static void *DIP_Check_thread(void *param)
-{
-    PRT_TID();
-    pthread_detach(pthread_self());
-
-    int iState,i;
-    while(1)
-    {
-        if(1 == uninitFlag)
-            break;
-        iState = MPU_DIP_GetAllState();
-        for (i = 0; i < ALARM_NUM; i++)
-        {
-            // if (1 == g_aiAlarmIn[i])
-            if ((iState & (1 << i)))
-            {
-                if (0 == GetBit32(g_tGuiState.iAlarmInState, i))
-                {
-                    char szUsername[MAX_USERNAME_LEN + 1];
-                    HANDLE hUser = MPU_USR_GetLocalLoginUser();
-                    MPU_USR_GetUserName(hUser, szUsername, MAX_USERNAME_LEN);
-                    MPU_OPL_AddLog(EDVR_EVENT_ALARM, EDVR_EVENT_ALARM_DETAIL_INPUT_ALARM,
-                                   i, 0, 0, szUsername);
-                    AlarmAction_SendEmail(ALERT_TYPE_ALARMIN, i);
-                    AlarmAction_SendFtp(ALERT_TYPE_ALARMIN, i);        //报警触发
-                    AlarmAction_UploadSdCard(ALERT_TYPE_ALARMIN, i);
-                }
-            }
-        }
-        #if 0
-        if (0 != iState)
-            LED_On(LED19);
-        else
-            LED_Off(LED19);
-        #endif
-        g_tGuiState.iAlarmInState = iState;
-
-        sleep(1);
-    }
-
-    return NULL;
 }
 
 static unsigned int  myGetTickCount()
@@ -3562,117 +3418,6 @@ int Osd_SoundCallBack(struct tagAlertInfo *pAlertInfo, struct tagActionInfo *pAc
     tChannelsState[pAlertInfo->nChannel].ulSoundTimeLast = myGetTickCount();
     pthread_mutex_unlock(&s_hSoundLock);
 
-    return 0;
-}
-
-
-//!\brief 报警回调函数
-//!\param struct tagAlertInfo *pAlertInfo 报警输入
-//!\param struct tagActionInfo *pActionInfo 报警响应
-//!\return
-
-//type: -1 - 无;0- 报警输入；1-IP冲突；2-网络断开;3-硬盘故障;4-盘组满;5-盘组异常;6-访问非法;7-视频丢失;8-移动侦测
-//int AlarmIn_ListCallBackFxn(int ch,int type);
-int MainAlarmCallBack(struct tagAlertInfo *pAlertInfo, struct tagActionInfo *pActionInfo)
-{
-    //MAIN_LOG_I("--MainAlarmCallBack---AlertType=0x%x---tActionType=0x%x\n",pAlertInfo->AlertType,pActionInfo->tActionType);
-    assert(NULL != pAlertInfo && pActionInfo != NULL);
-    switch (pAlertInfo->AlertType)
-    {
-            //!报警输入
-        case ALERT_TYPE_ALARMIN:
-            {
-                int iChannnel = pAlertInfo->nChannel;
-
-                if (iChannnel < 0 || iChannnel >= AlarmInNum())
-                {
-                    MAIN_LOG_I("iChannnel = %d erro\n", iChannnel);
-                    return -1;
-                }
-                static pthread_t DIPThrdID=0;			//线程ID
-                if(0 == DIPThrdID)
-                    pthread_create(&DIPThrdID, NULL, DIP_Check_thread, NULL);
-
-                MAIN_LOG_I("[%s] ch =%d alarm in\n", __FUNCTION__, iChannnel);
-                break;
-            }
-            //!移动侦测
-        case ALERT_TYPE_MOTION:
-            {
-                // 移动侦测的osd 显示回调函数
-                MAIN_LOG_I("ALERT_TYPE_MOTION ch %d\n", pAlertInfo->nChannel);
-                Osd_MotionCallBack(pAlertInfo, pActionInfo);
-
-                static pthread_t MotionThrdID=0;			//线程ID
-                if(0 == MotionThrdID)
-                    pthread_create(&MotionThrdID, NULL, Motion_Check_thread, NULL); //创建移动侦测线程
-                break;
-            }
-        case ALERT_TYPE_HUMANSHAPE:
-            {
-                // 人形检测的osd 显示回调函数
-                MAIN_LOG_I("ALERT_TYPE_HUMANSHAPE ch %d\n", pAlertInfo->nChannel);
-                Osd_HumanShapeCallBack(pAlertInfo, pActionInfo);
-
-                static pthread_t HumanShapeThrdID=0;			//线程ID
-                if (0 == HumanShapeThrdID)
-                {
-                    pthread_create(&HumanShapeThrdID, NULL, HumanShape_Check_thread, NULL); //创建人形检测线程
-                }
-                break;
-            }
-        case ALERT_TYPE_SOUNDDETECT:
-            {
-                // 声音检测
-                //MAIN_LOG_I("ALERT_SOUNDDETECT ch %d\n", pAlertInfo->nChannel);
-                Osd_SoundCallBack(pAlertInfo, pActionInfo);
-
-                static pthread_t SoundThrdID=0;            //线程ID
-                if (0 == SoundThrdID)
-                {
-                    pthread_create(&SoundThrdID, NULL, Sound_Check_thread, NULL); //创建声音检测线程
-                }
-                break;
-            }
-
-            //!编码异常
-        case ALERT_TYPE_ENCODEERROR:
-            MAIN_LOG_I("ALERT_TYPE_ENCODEERROR:" __TIME__ "-" __DATE__ "\n");
-            break;
-
-            //!视频丢失
-        case ALERT_TYPE_VIDEOLOST:
-            MAIN_LOG_I("ALERT_TYPE_VIDEOLOST:" __TIME__ "-" __DATE__ "\n");
-            break;
-            //!视频异常
-        case ALERT_TYPE_VIDEOEXCEPTION:
-            MAIN_LOG_I("!!!!!!!ALERT_TYPE_VIDEOEXCEPTION\n");
-            break;
-            //!硬盘错误
-        case ALERT_TYPE_DISKERROR:
-            MAIN_LOG_I("!!!!!!!ALERT_TYPE_DISKERROR\n");
-            break;
-            //!盘组异常
-        case ALERT_TYPE_DISKGROUP_ERROR:
-            MAIN_LOG_I("!!!!!!!ALERT_TYPE_DISKGROUP_ERROR\n");
-            break;
-            //!IP冲突
-        case ALERT_TYPE_IPCONFLICT:
-            MAIN_LOG_I("!!!!!!!ALERT_TYPE_IPCONFLICT\n");
-            break;
-            //!非法访问
-        case ALERT_TYPE_ILLEGEACCESS:
-            MAIN_LOG_I("!!!!!!!ALERT_TYPE_ILLEGEACCESS\n");
-            break;
-            //!网线断
-        case ALERT_TYPE_RETICLEDISCONNECT:
-            //MAIN_LOG_I("!!!!!!!ALERT_TYPE_RETICLEDISCONNECT\n");
-            break;
-            //!盘组满
-        case ALERT_TYPE_DISKFULL:
-            MAIN_LOG_I(" call ALERT_TYPE_DISKFULL !!!!!!\n");
-            break;
-    }
     return 0;
 }
 
@@ -4028,55 +3773,6 @@ static void *onvifDiscoveryMode_check(void *param)
     return NULL;
 }
 
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-static void *moto_check(void *param)
-{
-    PRT_TID();
-    pthread_detach(pthread_self());
-
-    int nval = 0;
-    int nSpeed = 6;
-    int status = 0;
-    int timeout = 300; //默认超时时间
-    CConfig *pcfg = NULL;
-    CPtzManager *pMgr = NULL;
-
-    pcfg = CConfig::GetInstance();
-    pMgr = CPtzManager::PTZ_GetInstance();
-
-    if ((NULL == pMgr) || (NULL == pcfg))
-    {
-        return NULL;
-    }
-
-    /* 1、等待云台自检完成 */
-    while (timeout)
-    {
-        pMgr->PTZ_GetStartStatus(&status);
-        // 没有电机或电机自检和回到初始位置完成
-        if (1 == status)
-        {
-            break;
-        }
-        SelectSleepSec(1);
-        timeout--;
-    }
-
-    /* 2、恢复到配置文件中的速度值 */
-    nSpeed = MPU_PTZ_GetSpeed(0);
-    MPU_PTZ_SetSpeed(nSpeed, 0);
-
-    /* 3、依据掉电前配置开始巡航 */
-    nval = pcfg->GetValue("PTZ_Advance", "PTZ_MotorCruiseEnable", 0);
-    if (0 != nval)
-    {
-        pMgr->PTZ_StartMotorCruise(0);
-    }
-
-    return NULL;
-}
-#endif
-
 static void * SystemStartOverThread(void *lParam)
 {
     PRT_TID();
@@ -4130,13 +3826,6 @@ int SystemStartThreadManager()
     {
         MAIN_LOG_I("########### create jffs2_check pthread fail ###########\n");
     }
-
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-    if (pthread_create(&threadId_motocheck, NULL, moto_check, NULL) != 0)
-    {
-        MAIN_LOG_I("########### create moto_check pthread fail ###########\n");
-    }
-#endif
 
     if (pthread_create(&threadId_SystemStartOver, NULL, SystemStartOverThread, NULL) != 0)
     {
@@ -4486,13 +4175,6 @@ static int GenDevCapByCustom(int nMaxSensorCnt)
     s32Ret = pCfg->LoadFileRO(CUSTOM_ABILITY_FILE);
     if (0 == s32Ret)
     {
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-        if (pCfg->CheckKeyExist("FunctionSupport", "IsSupportMotor"))
-        {
-            bSupportMotor = pCfg->GetValue("FunctionSupport", "IsSupportMotor", 1);
-        }
-#endif
-
         if (pCfg->CheckKeyExist("FunctionSupport", "IsSupportWired"))
         {
             bSupportWired = pCfg->GetValue("FunctionSupport", "IsSupportWired", 0);
@@ -5586,11 +5268,7 @@ static int GenDevPTZCapByCustom(unsigned int isDLauthorization)
 #endif
     /* 此处注意：后续index值必须小于数组成员个数 */
     int index = 0;
-#ifdef __DIGITAL_ZOOM_DRAG_SUPPORT__
-    SXT xml_tree_data[7];
-#else
     SXT xml_tree_data[6];
-#endif
     memset(xml_tree_data, 0, sizeof(xml_tree_data));
 
     /* 从customability.ini加载定制 */
@@ -5623,42 +5301,6 @@ static int GenDevPTZCapByCustom(unsigned int isDLauthorization)
     }
     CConfig::ReleaseInstance (pCfg);
     pCfg = NULL;
-#if defined(__PRODUCT_G84F__) || defined (__PRODUCT_W84F__) || defined (__PRODUCT_G63F__)|| defined (__PRODUCT_W63F__)
-	/* 从customability.ini加载定制 */
-	pCfg = CConfig::NewInstance();
-	s32Ret = pCfg->LoadFileRO (CUSTOM_CONFIGMODE_FILE);
-	if (0 == s32Ret )
-	{
-		if (pCfg->CheckKeyExist ("MultiPtzDevCfg", "bSptPtzLeft") )
-		{
-			if(bSupportMultiPtzDev)
-			{
-				//是否支持多云台功能
-            	bSptPtzLeft = pCfg->GetValue ("MultiPtzDevCfg", "bSptPtzLeft", bSptPtzLeft);
-			}
-			else
-			{
-				bSptPtzLeft = 0;			
-			}
-
-        }
-		if (pCfg->CheckKeyExist ("MultiPtzDevCfg", "bSptPtzRight") )
-		{
-			if(bSupportMultiPtzDev)
-			{
-				//是否支持多云台功能
-            	bSptPtzRight = pCfg->GetValue ("MultiPtzDevCfg", "bSptPtzRight", bSptPtzRight);
-			}
-			else
-			{
-				bSptPtzRight = 0;
-			}
-
-        }
-	}
-	CConfig::ReleaseInstance (pCfg);
-	pCfg = NULL;
-#endif
 
     if (bSupportMotor == 0)
     {
@@ -5693,11 +5335,6 @@ static int GenDevPTZCapByCustom(unsigned int isDLauthorization)
     xml_tree_data[index].p = "Channel:Cruise:Support";
     xml_tree_data[index].value = bSupportCruise;
     index++;
-#ifdef __DIGITAL_ZOOM_DRAG_SUPPORT__
-    xml_tree_data[index].p = "Channel:Zoom:Support";
-    xml_tree_data[index].value = bSupportTrackZoom;
-    index++;
-#endif
 
     pFile = fopen(PTZ_CAP_FILE_PATH, "r");
     if (pFile == NULL)
@@ -6238,158 +5875,6 @@ int MainUpload_Callback(DWORD dwUserID, int iFileType, unsigned long ulTransSize
                     }
                     return 1;
                 }
-
-            }
-            MAIN_LOG_I("MainUpload_Callback %lu %lu\n", ulTransSize, ulTotalSize);
-        }
-        return 0;
-    }
-    else if ((int) 2 == iFileType)
-    {
-        static char acPtzProtocal[200];
-
-        // 开始升级云台协议，pcIp 代表协议绝对地址
-        if (NULL != pcIp)
-        {
-            hTemp = (HANDLE) SysUpdateStart();
-            if (NULL != hTemp)
-            {
-                snprintf(acPtzProtocal, sizeof(acPtzProtocal), "%s", pcIp);
-                hRemoteUpdate = hTemp;
-                s_dwUserID = dwUserID;
-                return (int) hRemoteUpdate;	//;
-            }
-            else
-                return 0;
-        }
-        else
-        {
-            if (ulTransSize - ulTotalSize <= 1 && 0 == firstComplete)
-            {
-                int iRetOver = 0;
-
-                SysUpdateStop((DWORD) hRemoteUpdate);
-                if (0 == MPU_PTZ_InstallProtocol(acPtzProtocal))
-                {
-                    char acUerName[64];
-
-                    char acIPAddress[20];
-
-                    char acLoginTime[30];
-
-                    HANDLE hUser = NULL;
-
-                    DWORD dwIpaddr = 0;
-                    MPU_CIU_GetRemoteByID(dwUserID, &hUser, acUerName, sizeof(acUerName), acIPAddress, sizeof(acIPAddress), acLoginTime, sizeof(acLoginTime));
-                    IPFromString(acIPAddress, &dwIpaddr);
-                    MPU_OPL_AddLog(EDVR_EVENT_SETTING, EDVR_EVENT_SETTING_DETAIL_IMPORT_PTZ, 0, 0, dwIpaddr, acUerName);
-                    iRetOver = 0;
-                }
-                else
-                {
-                    iRetOver = 4;
-                }
-
-                char szCmd[256] = "";
-
-                int iRet = 0;
-
-                snprintf(szCmd, sizeof(szCmd), "rm  %s/*", PTZ_PATH);
-                iRet = mysystem(szCmd);
-                if (iRet)
-                {
-                    MAIN_LOG_I("rm Error. szCmd = [%s]. code = %d.\n", szCmd, iRet);
-                }
-                firstComplete = 1;
-                secondComplete = 0;
-                return iRetOver;
-            }
-            else if (1 == firstComplete || 1 == secondComplete)//升级包后面多传的一个字节会进来这里，这里返回一个特殊值给write做判断
-            {
-                if (1 == firstComplete)
-                {
-                    secondComplete = 1;
-                }
-                firstComplete = 0;
-                return 9;
-            }
-            else
-            {
-                if (0xffffffff == ulTransSize)	// 失败
-                {
-                    SysUpdateStop((DWORD) hRemoteUpdate);
-                    char szCmd[256] = "";
-
-                    int iRet = 0;
-
-                    snprintf(szCmd, sizeof(szCmd), "rm  %s", acPtzProtocal);
-                    iRet = mysystem(szCmd);
-                    if (iRet)
-                    {
-                        MAIN_LOG_I("rm Error. szCmd = [%s]. code = %d.\n", szCmd, iRet);
-                    }
-                    return 1;
-                }
-            }
-        }
-        return 0;
-    }
-    else if ((int) 6 == iFileType)	// 上传图像调节文件
-    {
-        if (NULL != pcIp)		// 开始升级
-        {
-            hTemp = (HANDLE) SysUpdateStart();
-            if (NULL != hTemp)
-            {
-                hRemoteUpdate = hTemp;
-                s_dwUserID = dwUserID;
-                return (int) hRemoteUpdate;
-            }
-            else
-            {
-                return 0;
-            }
-        }
-        else
-        {
-            if (ulTransSize - ulTotalSize <= 1 && 0 == firstComplete)
-            {
-                SysUpdateStop((DWORD) hRemoteUpdate);
-                void *hChannelHandle = ZWSys_EncChannelOpen(0);
-                if (0 != ZWSys_SetTuneToneCurve(hChannelHandle, 0, ISPTONECURVEFILENAME))
-                {
-                    return 4;
-                }
-                firstComplete = 1;
-                secondComplete = 0;
-            }
-            else if (1 == firstComplete || 1 == secondComplete)//升级包后面多传的一个字节会进来这里，这里返回一个特殊值给write做判断
-            {
-                if (1 == firstComplete)
-                {
-                    secondComplete = 1;
-                }
-                firstComplete = 0;
-                return 9;
-            }
-            else
-            {
-                if (0xffffffff == ulTransSize)	// 失败
-                {
-                    SysUpdateStop((DWORD) hRemoteUpdate);
-                    char szCmd[256] = "";
-
-                    int iRet = 0;
-
-                    snprintf(szCmd, sizeof(szCmd), "rm  %s", ISPTONECURVEFILENAME);
-                    iRet = mysystem(szCmd);
-                    if (iRet)
-                    {
-                        MAIN_LOG_I("rm Error. szCmd = [%s]. code = %d.\n", szCmd, iRet);
-                    }
-                    return 1;
-                }
-
             }
             MAIN_LOG_I("MainUpload_Callback %lu %lu\n", ulTransSize, ulTotalSize);
         }
@@ -7307,66 +6792,6 @@ static int CheckCustomFile()
 
 void SetCallBack()
 {
-    int iRet = 0;
-
-    int iChNum = EncChNum();
-
-    int i = 0;
-
-    // 设置移动侦测报警回调函数
-    iRet = MPU_AVL_SetAlarmCallBack(ALERT_TYPE_MOTION, MainAlarmCallBack);
-    if (iRet != 0)
-    {
-        MAIN_LOG_I("MPU_AVL_SetAlarmCallBack erro\n");
-    }
-    for (i = 0; i < iChNum; i++)
-    {
-        MPU_AVL_EnableAction(i, ALERT_TYPE_MOTION, ACTION_GUI, 1);
-    }
-
-    // 设置人形检测报警回调函数
-    iRet = MPU_AVL_SetAlarmCallBack(ALERT_TYPE_HUMANSHAPE, MainAlarmCallBack);
-    if (iRet != 0)
-    {
-        MAIN_LOG_I("MPU_AVL_SetAlarmCallBack erro\n");
-    }
-    for (i = 0; i < iChNum; i++)
-    {
-        MPU_AVL_EnableAction(i, ALERT_TYPE_HUMANSHAPE, ACTION_GUI, 1);
-    }
-
-    // 设置声音侦测报警回调函数
-    iRet = MPU_AVL_SetAlarmCallBack(ALERT_TYPE_SOUNDDETECT, MainAlarmCallBack);
-    if (iRet != 0)
-    {
-        MAIN_LOG_I("MPU_AVL_SetAlarmCallBack erro\n");
-    }
-    for (i = 0; i < iChNum; i++)
-    {
-        MPU_AVL_EnableAction(i, ALERT_TYPE_SOUNDDETECT, ACTION_GUI, 1);
-    }
-
-    /*
-     * 非法访问
-     * ALERT_TYPE_ILLEGEACCESS,
-     */
-    MPU_USR_SetAlarmCallBack(ALERT_TYPE_ILLEGEACCESS, MainAlarmCallBack);
-
-    //!IP冲突
-    MPU_NET_SetIPCallBack(ALERT_TYPE_IPCONFLICT, MainAlarmCallBack);
-
-    //!网线断
-    MPU_NET_SetPHYCallBack(ALERT_TYPE_RETICLEDISCONNECT, MainAlarmCallBack);
-
-    //!硬盘错误
-    MPU_STR_Disk_SetErrorNotifyCallback(ALERT_TYPE_DISKERROR, MainAlarmCallBack);
-
-    //!硬盘满
-    MPU_STR_DiskGroup_SetFullCallBack(ALERT_TYPE_DISKFULL, MainAlarmCallBack);
-
-    //盘组异常
-    MPU_STR_DiskGroup_SetErrorCallBack(ALERT_TYPE_DISKGROUP_ERROR, MainAlarmCallBack);
-
     MPU_CIU_SetUpdateNotifyCallback(MainUpload_Callback);
     MPU_CIU_SetRemoteControlCallback(MainRemoteControl_Callback);
 
@@ -7384,8 +6809,6 @@ void SetCallBack()
     ZWSys_RegisterQrScanCallback(QrScanCallback);
 
     MPU_SYS_Maintenance_SetCallBack(Maintenance_Cb);
-
-    MPU_SYS_AwakeSchedule_SetCallBack(AwakeSchedule_Cb);
 }
 
 //开机检测是否需要重新拆分

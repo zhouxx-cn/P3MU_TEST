@@ -1336,12 +1336,6 @@ int MPU_AVL_UpdateDorStatus(int bDorEnable);
 int MPU_AVL_SoundDetect_SetCfg(int nCh, int nEnable, int nSentive);
 int MPU_AVL_SoundDetect_GetCfg(int nCh, int *pEnable, int *pSentive);
 
-#if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__)
-int MPU_AVL_GetTrackZoomEnable(int nCh, int *nEnable);
-
-int MPU_AVL_SetTrackZoomEnable(int nCh, int nEnable);
-#endif
-
 #if defined (__IS_SUPPORT_LONGAWAYHOME__) 
 int MPU_AVL_HumanShape_GetLongAwayEnable(int nCh, int *nEnable);
 int MPU_AVL_HumanShape_GetLongAwayDuration(int nCh, int *AlarmDuration);

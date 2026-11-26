@@ -15,7 +15,6 @@
 #include "MPU_CIU_global.h"
 #include "PUB/lattice2bmp24.h"	//点阵转位图
 #include "PUB/common_pub.h"
-#include "MPU_PTZ_API.h"
 #include "tagPtzCode.h"
 
 static int bSupportNormalWhite = 0;
@@ -1416,29 +1415,6 @@ static int SetPicChannel_HumanShape(DWORD dwUserID, int nCh, LPHY_DVR_PEOPLE_DET
 		nRet = IDVR_CIU_CALLSDK_FAIL;
 	}
 
-    if (1 == pcfg->nValidTrack)
-    {
-        nSDKRet = MPU_AVL_SetHumanformTrackEnable(nCh,  pcfg->nEnableTrack);
-        if (0 == nSDKRet)
-        {
-            bChange = TRUE;
-        }
-        else 
-        {
-            MPU_ERR("Set Ch %d track enable %d fail, return %d\n", nCh, pcfg->nEnableTrack, nSDKRet);
-            nRet = IDVR_CIU_CALLSDK_FAIL;
-        }
-    }
-    else
-    {
-        MPU_ERR("Set Ch %d track valid %d fail,\n", nCh, pcfg->nValidTrack);
-    }
-	
-#if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__) && !defined (__IS_SUPPORT_AF_SOFT_YSSD__)
-		if (pcfg->nEnableTrack == 0) pcfg->cTrackZoom = 0;
-		MPU_AVL_SetTrackZoomEnable(nCh, pcfg->cTrackZoom);
-#endif
-
     /* 处理方式 */
     memset(&struHandleType, 0, sizeof(HY_DVR_HANDLEEXCEPTION));
     GetHandleConfig_HumanShape(nCh, &struHandleType);
@@ -1524,24 +1500,9 @@ static int GetPicChannel_HumanShape(int nCh, LPHY_DVR_PEOPLE_DETECT pcfg)
 	GetSchedule_HumanShape(nCh, &pcfg->struSchedTime);
 
     /*人形跟踪使能*/
-	pcfg->nValidTrack = 1;
-	pcfg->nEnableTrack = MPU_AVL_GetHumanformTrackEnable(nCh);
-	
-#if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__)
-	/*人形跟踪变倍使能*/
-	int nTrackZoom = 0; 
-	MPU_AVL_GetTrackZoomEnable(nCh, &nTrackZoom);
-	if (nTrackZoom == 0) 
-	{
-		pcfg->cTrackZoom = 0;
-	} 
-	else
-	{
-		pcfg->cTrackZoom = 1;
-	}
-#endif
+    pcfg->nValidTrack = 1;
 
-	return nRet;
+    return nRet;
 }
 
 static int SetPicChannel_Motion_Ext(int nCh, LPHY_DVR_MOTION_EX_LIST pcfg)
@@ -1959,30 +1920,7 @@ int CIU_GetConfigure_Pic(DWORD dwUserID, DWORD dwMajorType, DWORD dwMinorType, B
 				nSDKRet = GetPicChannel_HumanShape(0, &(pcfg->struPeopleDetect[0]));
 				CIU_ERR(nSDKRet, nRet);
 			}
-			break;
-
-		#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		case PICCFG_PEOPLE_DETECT_STAY_TIME:
-			{
-				if (*pdwBufLen < sizeof(HY_DVR_PEOPLE_DETECT_STAY_TIME))
-                {
-                    nRet = IDVR_CIU_BUF_SMALL;
-                    MPU_ERR("buffer is too small, need %d, real %lu\n", sizeof(HY_DVR_PEOPLE_DETECT_STAY_TIME), *pdwBufLen);
-                    break;
-                }
-                
-                LPHY_DVR_PEOPLE_DETECT_STAY_TIME pcfg = (LPHY_DVR_PEOPLE_DETECT_STAY_TIME)pBuffer;
-                
-                ///////////////////////////////////////////////////////////////////////////////
-                //初始化输出缓冲区
-                memset(pcfg, 0, sizeof(HY_DVR_PEOPLE_DETECT_STAY_TIME));
-                *pdwBufLen = sizeof(HY_DVR_PEOPLE_DETECT_STAY_TIME);
-				
-				 pcfg->nValid = 1;
-				 MPU_AVL_GetTrackStayTime(0, &pcfg->nStayTime);
-			}
-			break;
-		#endif
+            break;
             case  PICCFG_OSD_CONF_EX:
                 {
                 ///////////////////////////////////////////////////////////////////////////////
@@ -2271,32 +2209,7 @@ int CIU_SetConfigure_Pic(DWORD dwUserID, DWORD dwMajorType, DWORD dwMinorType, c
 				}
             }
             break;
-
-		#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		case PICCFG_PEOPLE_DETECT_STAY_TIME:
-			{
-				//判断buf空间是否足够
-				if (dwBufLen < sizeof(HY_DVR_PEOPLE_DETECT_STAY_TIME))
-				{
-					nRet = IDVR_CIU_BUF_SMALL;
-					MPU_ERR("buffer is too small, need %d, real %lu\n", sizeof(HY_DVR_PEOPLE_DETECT_STAY_TIME), dwBufLen);
-					break;
-				}
-
-				LPHY_DVR_PEOPLE_DETECT_STAY_TIME pcfg = (LPHY_DVR_PEOPLE_DETECT_STAY_TIME) pBuffer;
-				if (0 == pcfg->nValid)
-				{
-					MPU_DBG("0 == pcfg->bValid\n");
-					nRet = IDVR_CIU_STRUCT_UNVALID;
-				}
-				else
-				{
-					MPU_AVL_SetTrackStayTime(0, pcfg->nStayTime);
-				}
-			}
-			break;
-		#endif
-        case PICCFG_OSD_CONF_EX:
+            case PICCFG_OSD_CONF_EX:
             {
                 ///////////////////////////////////////////////////////////////////////////////
                 //判断buf空间是否足够

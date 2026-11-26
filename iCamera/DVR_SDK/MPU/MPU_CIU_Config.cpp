@@ -90,18 +90,10 @@ static int CIU_GetConfigure(eProtocolID eProtocol, DWORD dwUserID, DWORD dwMajor
 			nRet = CIU_GetConfigure_Time(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
 			break;
 
-		case HY_DVR_GET_PTZCFG:
-			nRet = CIU_GetConfigure_Ptz(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
-			break;
+        case HY_DVR_GET_ALARMCFG:
+            nRet = CIU_GetConfigure_Alarm(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
+            break;
 
-		case HY_DVR_GET_SERIALCFG:
-			nRet = CIU_GetConfigure_Serial(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
-			break;
-
-		case HY_DVR_GET_ALARMCFG:
-			nRet = CIU_GetConfigure_Alarm(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
-			break;
-        
         /* 添加抓图配置信息(新添) */
         case HY_DVR_GET_ALARMCFG_EX:
 			nRet = CIU_GetConfigure_AlarmEx(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
@@ -351,9 +343,6 @@ static int CIU_GetConfigure(eProtocolID eProtocol, DWORD dwUserID, DWORD dwMajor
 			nRet = CIU_GetConfigure_CurrentFrame_Param(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
 			break;
 #endif
-        case HY_DVR_GET_DEVICE_DIGITAL_MULTIPLE:
-            nRet = CIU_GetConfigure_DeviceDragDigitalMultiple(dwUserID, dwMajorType, dwMinorType, pBuffer, pdwBufLen);
-            break;
 
         //声音侦测
 		case HY_DVR_GET_CRY_SCREAM_DETECT:
@@ -465,17 +454,9 @@ static int CIU_SetConfigure(DWORD dwUserID, DWORD dwMajorType, DWORD dwMinorType
 			nRet = CIU_SetConfigure_Time(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
 			break;
 
-		case HY_DVR_SET_PTZCFG:
-			nRet = CIU_SetConfigure_Ptz(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
-			break;
-
-		case HY_DVR_SET_SERIALCFG:
-			nRet = CIU_SetConfigure_Serial(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
-			break;
-
-		case HY_DVR_SET_ALARMCFG:
-			nRet = CIU_SetConfigure_Alarm(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
-			break;
+        case HY_DVR_SET_ALARMCFG:
+            nRet = CIU_SetConfigure_Alarm(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
+            break;
         /* 设置用户自定义透传的信息 */
         case HY_DVR_SET_DEVICE_CUSTOM_FUNCTION:
             nRet = CIU_SetConfigure_DeviceCustomFunction(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
@@ -661,9 +642,6 @@ static int CIU_SetConfigure(DWORD dwUserID, DWORD dwMajorType, DWORD dwMinorType
 			nRet = CIU_SetConfigure_CloudStorageMode(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
 			break;
 #endif
-        case HY_DVR_SET_DEVICE_DIGITAL_MULTIPLE:
-            nRet = CIU_SetConfigure_DeviceDragDigitalMultiple(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);
-            break;
         //声音侦测
 		case HY_DVR_SET_CRY_SCREAM_DETECT:
 			nRet = CIU_SetConfigure_CryDetect(dwUserID, dwMajorType, dwMinorType, pBuffer, dwBufLen);

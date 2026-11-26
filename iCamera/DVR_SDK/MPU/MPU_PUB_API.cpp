@@ -13,7 +13,6 @@
 #include "ddt_so.h"
 #include "PUB/mysystem.h"
 #include "PUB/ConvertCharset.h"
-#include "MPU_DIP_API.h"
 #include "MPU_PRW_API.h"
 #include "COsd.h"
 #include "../PAR/CPubFunc.h"
@@ -1160,21 +1159,6 @@ int MPU_PUB_SetSpotMode(int nMode)
     {
         return 0;
     }
-
-    int i = 0;
-
-    int nPortNum = MPU_DIP_GetPortNum();
-
-    for (i = 0; i < nPortNum; i++)
-    {
-        int nScreen = MPU_DIP_GetEnableAction(i, ACTION_SCREEN);
-
-        if (nScreen & 0x1E)
-        {
-            MPU_DIP_SetEnableAction(i, ACTION_SCREEN, (nScreen & 0x1) | 0x1E);
-        }
-    }
-
     return MPU_PRW_SetSpotMode(nMode);
 }
 

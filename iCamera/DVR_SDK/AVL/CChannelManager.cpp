@@ -31,7 +31,6 @@
 #include "ddt_so.h"
 #include "AVL_global.h"
 #include "common_pub.h"
-#include "PTZ/CPtzManager.h"
 //#include "NET/INet.h"
 #include "STR/CDiskManager.h"
 #include "STR/tagDiskInfo.h"
@@ -39,9 +38,6 @@
 #include "mauth.h"
 //#define  MAIN_AUX_SHOW
 #include "../PAR/CPubFunc.h"
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-#include "CAIStream.h"
-#endif
 
 int bSupportRtmp = 0;
 
@@ -401,12 +397,9 @@ CChannelManager::CChannelManager()
 	int j =0;
 
 	for (i = 0; i < MAX_CH_MANAGER_NUM; i++)
-	{
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		theCAIStream[i] = NULL;
-#endif
-		theCMotion[i] = NULL;
-		theCHumanShape[i] = NULL;
+    {
+        theCMotion[i] = NULL;
+        theCHumanShape[i] = NULL;
         theCSoundDetect[i] = NULL;
 		theCOptics[i] = NULL;
 		theCRecord[i] = NULL;
@@ -451,12 +444,12 @@ CChannelManager::CChannelManager()
 #endif
 		m_uiFourthRealBits[i] = 0;
 		m_uiFourthRealBits_Stat[i] = 0;
-		m_iFourthLastTime[i] = 0;			
-	}
+        m_iFourthLastTime[i] = 0;
+    }
 
-	m_iLength = 0;
-	m_iEncChannelCnt = 0;
-	m_FnxAvCallBack = NULL;
+    m_iLength = 0;
+    m_iEncChannelCnt = 0;
+    m_FnxAvCallBack = NULL;
 
 	m_hWatchThread = 0;
 	m_hCheckThread = 0;
@@ -669,14 +662,11 @@ int CChannelManager::Init()
 		theCMotion[i] = new CMotion(i, theCoderHandle[i]);
 		theCHumanShape[i] = new CHumanShape(i, theCoderHandle[i]);
         theCSoundDetect[i] = new CSoundDetectManager(i, theCoderHandle[i]);
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		theCAIStream[i] = new CAIStream(i, theCoderHandle[i]);
-#endif
-		theCOptics[i] = new COptics(i, theCoderHandle[i]);
+        theCOptics[i] = new COptics(i, theCoderHandle[i]);
 
-		theCOsd[i] = new COsd(i, theCoderHandle[i]);
-		theCCoder[i] = new CCoder(i, theCoderHandle[i]);
-		theCCapturePic[i] = new CCapturePic(i, theCoderHandle[i]);
+        theCOsd[i] = new COsd(i, theCoderHandle[i]);
+        theCCoder[i] = new CCoder(i, theCoderHandle[i]);
+        theCCapturePic[i] = new CCapturePic(i, theCoderHandle[i]);
 		theCRecord[i] = new CRecord(i, theCoderHandle[i]);
 
 		if (NULL == theCMotion[i]
@@ -700,12 +690,9 @@ int CChannelManager::Init()
 		ret |= theCMotion[i]->Init(dds.bytVideoInChannels, dds.bytAlarmOutChannels);
 		ret |= theCHumanShape[i]->Init(dds.bytVideoInChannels, dds.bytAlarmOutChannels);
         ret |= theCSoundDetect[i]->Init(dds.bytVideoInChannels, dds.bytAlarmOutChannels);
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		ret |= theCAIStream[i]->Init(dds.bytVideoInChannels, dds.bytAlarmOutChannels);
-#endif
-		ret |= theCCoder[i]->Init(dds.bytVideoInChannels, dds.bytAlarmOutChannels);
-		
-		// 将区域布防配置同步到移动侦测和人形检测
+        ret |= theCCoder[i]->Init(dds.bytVideoInChannels, dds.bytAlarmOutChannels);
+
+        // 将区域布防配置同步到移动侦测和人形检测
 		{
 			// 1.区域信息
 			struct tagPolygon pg = {0};
@@ -917,11 +904,6 @@ int CChannelManager::Init()
 		m_AudioCodec = pCConfig->GetValue("AudioIn", "AudioCodec", 2);
 		ZWSys_SetAudioCodec((AudioEncodeMode_t)m_AudioCodec);    
 	}
-
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-    /* 注册人形跟踪回调 */
-    ZWSys_HumanTrackerCallBack(HumanTrackerCallBack_FNX);
-#endif
 
 #if defined  __USE_RTMP__
 	if(!access(CUSTOM_CONFIG, 0))
@@ -1194,19 +1176,14 @@ int CChannelManager::UnInit()
 		if (NULL != theCSoundDetect[i])
 			delete theCSoundDetect[i];
 
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		if (NULL != theCAIStream[i])
-			delete theCAIStream[i];
-#endif
+        if (NULL != theCOptics[i])
+            delete theCOptics[i];
 
-		if (NULL != theCOptics[i])
-			delete theCOptics[i];
+        if (NULL != theCRecord[i])
+            delete theCRecord[i];
 
-		if (NULL != theCRecord[i])
-			delete theCRecord[i];
-
-		if (NULL != theCOsd[i])
-			delete theCOsd[i];
+        if (NULL != theCOsd[i])
+            delete theCOsd[i];
 
 		if (NULL != theCCoder[i])
 			delete theCCoder[i];
@@ -1217,14 +1194,11 @@ int CChannelManager::UnInit()
         theCMotion[i] = NULL;
 		theCHumanShape[i] = NULL;
         theCSoundDetect[i] = NULL;
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		theCAIStream[i] = NULL;
-#endif
-		theCOptics[i] = NULL;
-		theCRecord[i] = NULL;
-		theCOsd[i] = NULL;
-		theCCoder[i] = NULL;
-		theCCapturePic[i] = NULL;
+        theCOptics[i] = NULL;
+        theCRecord[i] = NULL;
+        theCOsd[i] = NULL;
+        theCCoder[i] = NULL;
+        theCCapturePic[i] = NULL;
 		theCoderHandle[i] = NULL;
 		m_iAV_status[i] = 0;	//完毕
 	}
@@ -6342,28 +6316,6 @@ int CChannelManager::HumanShape_GetHumanOverlayInfo(int nCh, char *nMainStreamOv
 	return (int) theCHumanShape[nCh]->GetHumanOverlayInfo(nMainStreamOverlay, nSubStreamOverlay);
 }
 
-int CChannelManager::GetHumanShapeTrackEnable(int nCh)
-{
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return (int) theCAIStream[nCh]->GetTrackSwitchParam(); 
-}
-
-int CChannelManager::SetHumanShapeTrackEnable(int nCh, int nEnable)
-{
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return (int) theCAIStream[nCh]->SetTrackSwitchParam(nEnable); 
-}
-
 int CChannelManager::HumanShape_SetDetectAreaOverlayInfo(int nCh, int nMainStreamOverlay, int nSubStreamOverlay)
 {
 	if (!m_bInit)
@@ -6641,141 +6593,6 @@ int CChannelManager::FaceCapSimplify_SetEventCallBack(int nCh, int (*CallBack) (
 {
 	return 0;
 }
-
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-
-int CChannelManager::SetTrackDataBuf(int nCh, char *sBuff, int nLen)
-{
-	if (!m_bInit)
-	{
-		AVL_ERR("[CChannelManager:%s]not inited\n", __FUNCTION__);
-		return -1;
-	}
-
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-
-    return theCAIStream[nCh]->DealAIStreamData(sBuff, nLen); 
-}
-
-int CChannelManager::HumanTrackerCallBack_FNX(char *sBuff, int nLen)
-{
-	CChannelManager *pccm = CChannelManager::GetInstanceHandle();
-	if (NULL != pccm)
-	{
-	    pccm->SetTrackDataBuf(0, sBuff, nLen);
-	}
-
-	return 0;
-}
-
-int CChannelManager::SetTrackStayTime(int nCh, int nStayTimeSec)
-{
-	if (!m_bInit)
-	{
-		AVL_ERR("[CChannelManager:%s]not inited\n", __FUNCTION__);
-		return -1;
-	}
-
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return theCAIStream[nCh]->SetTrackStayTime(nStayTimeSec);	
-}
-
-int CChannelManager::GetTrackStayTime(int nCh, int *nStayTimeSec)
-{
-	if (!m_bInit)
-	{
-		AVL_ERR("[CChannelManager:%s]not inited\n", __FUNCTION__);
-		return -1;
-	}
-
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return theCAIStream[nCh]->GetTrackStayTime(nStayTimeSec);
-}
-
-#if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__)
-int CChannelManager::SetTrackZoomEnable(int nCh, int nEnable)
-{
-	if (!m_bInit)
-	{
-		AVL_ERR("[CChannelManager:%s]not inited\n", __FUNCTION__);
-		return -1;
-	}
-
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return theCAIStream[nCh]->SetTrackZoomEnable(nEnable);	
-}
-
-int CChannelManager::GetTrackZoomEnable(int nCh, int *nEnable)
-{
-	if (!m_bInit)
-	{
-		AVL_ERR("[CChannelManager:%s]not inited\n", __FUNCTION__);
-		return -1;
-	}
-
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return theCAIStream[nCh]->GetTrackZoomEnable(nEnable);
-}
-#endif
-
-int CChannelManager::GetTrackStatCfg(int nCh, int *trackEnable, int *linkAction)
-{
-	if (!m_bInit)
-	{
-		AVL_ERR("[CChannelManager:%s]not inited\n", __FUNCTION__);
-		return -1;
-	}
-
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return theCAIStream[nCh]->GetTrackStatCfg(trackEnable, linkAction);
-}
-
-int CChannelManager::SetTrackLinkStart(int nCh, int linkStart)
-{
-	if (!m_bInit)
-	{
-		AVL_ERR("[CChannelManager:%s]not inited\n", __FUNCTION__);
-		return -1;
-	}
-
-	if (nCh < 0 || nCh >= m_iEncChannelCnt)
-	{
-		AVL_ERR("[CChannelManager:%s]channel_no err, channel %d\n", __FUNCTION__, nCh);
-		return -1;
-	}
-	
-	return theCAIStream[nCh]->SetTrackLinkStart(linkStart);
-}
-#endif
 
 int CChannelManager::TriggerEvent(int nCh, unsigned long dwEventType, unsigned long dwSubEventType, unsigned long dwParam1, unsigned long dwParam2, unsigned long dwParam3, char * pBuffer, unsigned long dwBufferLen)
 {
@@ -7324,16 +7141,12 @@ int CChannelManager::CheckStaus()
 		theCHumanShape[i]->CheckHumanShape();
         //声音侦测 ALERT_SOUNDDETECT
         theCSoundDetect[i]->CheckSound();
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-		/* 检测是否有人形 */
-		theCAIStream[i]->CheckAIStream();
-#endif
-		//图像参数检测
-		theCOptics[i]->CheckOptics();
-		theCCoder[i]->CheckCoderError((bCoderError >> i) & 1);
-	}
+        //图像参数检测
+        theCOptics[i]->CheckOptics();
+        theCCoder[i]->CheckCoderError((bCoderError >> i) & 1);
+    }
 
-	return 0;
+    return 0;
 }
 
 int CChannelManager::CheckCapture()

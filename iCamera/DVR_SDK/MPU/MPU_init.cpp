@@ -50,12 +50,6 @@ BOOL g_bShutdown = FALSE;
 int g_CloudStorageMode = 0;
 #endif
 
-/**************************************************************************
- *                                                     全局函数                                                *
- **************************************************************************/
-int Init_PtzEletronic();
-int Init_Replenish();
-
 /* 线程管理资源 */
 typedef struct
 {
@@ -434,18 +428,8 @@ static void *mpu_init2_thread(void *param)
     int nRet;
 
     //初始化存储管理
-    MPU_DBG("\n........MPU_init.cpp.....1........STR_Init...初始化存储管理\n");	
+    MPU_DBG("\n........MPU_init.cpp.....1........STR_Init...初始化存储管理\n");
     MPU_CALL(STR_Init());
-	
-#ifdef __DIGITAL_ZOOM_DRAG_SUPPORT__
-		MPU_DBG("\n......MPU_init.cpp......2.......ZOOM_Init.....初始化变倍控制模块\n");
-		MPU_CALL(ZOOM_Init());
-#endif
-
-    //初始化云台控制模块
-    MPU_DBG("\n......MPU_init.cpp......2.......PTZ_Init.....初始化云台控制模块\n");
-    MPU_CALL(PTZ_Init());
-
 
     //初始化系统管理
     MPU_DBG("\n......MPU_init.cpp.......3.....SYS_Init......初始化系统管理\n");
@@ -453,17 +437,9 @@ static void *mpu_init2_thread(void *param)
 
     MPU_SYS_Led(NORMAL_HZ);
 
-    //初始化报警输出
-    MPU_DBG("\n...MPU_init.cpp.........4......DOP_Init......初始化报警输出\n");
-    MPU_CALL(DOP_Init());
-
     //初始化通道管理
     MPU_DBG("\n........MPU_init.cpp....5.......AVL_Init..初始化通道管理\n");
     MPU_CALL(AVL_Init());
-
-    //初始化报警输入
-    MPU_DBG("\n.....MPU_init.cpp........6...........DIP_Init....初始化报警输入\n");
-    MPU_CALL(DIP_Init());
 
     //初始化网络
     MPU_DBG("\n......MPU_init.cpp.......7...........NET_Init.初始化网络...\n");
@@ -487,8 +463,6 @@ static void *mpu_init2_thread(void *param)
 
     //初始化CIU
     MPU_CALL(NMS_Init());
-    MPU_CALL(Init_PtzEletronic());
-    MPU_CALL(Init_Replenish());
     MPU_CALL(ISP_Init());
 
     MPU_DBG("//all init");

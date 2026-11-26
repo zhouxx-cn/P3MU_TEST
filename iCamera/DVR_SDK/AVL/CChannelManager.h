@@ -53,8 +53,6 @@ class CSysManager;
 
 class CConfig;
 
-class CAIStream;
-
 //!\brief1、录像数据的切换，采取数据与定时器共同驱动的方式。由
 //通道管
 //!\brief理器负责启用定时器，各个通道提供检测的方法的方式处理
@@ -1470,14 +1468,7 @@ class CChannelManager
 
     int SetTrackDataBuf(int nCh, char *sBuff, int nLen);
 
-#if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__)
-		int SetTrackZoomEnable(int nCh, int nEnable);
-	
-		int GetTrackZoomEnable(int nCh, int *nEnable);
-#endif
-
-
-	//!\brief 设置外部需要音视频数据的回调函数
+    //!\brief 设置外部需要音视频数据的回调函数
 	//!\param AvCallBack回调函数指针
 	//!\param unsigned int tFrameTime 时间戳（秒）
 	//!\parma unsigned int tFrameTime_usec 微秒
@@ -1612,10 +1603,9 @@ class CChannelManager
 	CMotion *theCMotion[MAX_CH_MANAGER_NUM];
 	CHumanShape *theCHumanShape[MAX_CH_MANAGER_NUM];
     CSoundDetectManager *theCSoundDetect[MAX_CH_MANAGER_NUM];
-	CAIStream *theCAIStream[MAX_CH_MANAGER_NUM];
 
-	//##ModelId=49B0E57002A9
-	COptics *theCOptics[MAX_CH_MANAGER_NUM];
+    //##ModelId=49B0E57002A9
+    COptics *theCOptics[MAX_CH_MANAGER_NUM];
 
 	//##ModelId=49B0EEFD0042
 	CRecord *theCRecord[MAX_CH_MANAGER_NUM];

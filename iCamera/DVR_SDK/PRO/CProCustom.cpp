@@ -4,10 +4,7 @@
 #include "CJsonPub.h"
 #include "CConfig.h"
 #include "global_macro.h"
-#include "MPU_DOP_API.h"
 #include "./MPU/MPU_global.h"
-#include "MPU_PTZ_API.h"
-#include "MPU_ZOOM_API.h"
 #include "motoLib.h"
 #include "global_gather.h"
 //#define  MAXCONFIG        (13)
@@ -281,57 +278,7 @@ static int ChangeCustomCfg(eCustomCfgSet eCustomNo, int nValue)
             }
 #endif
 		}
-		break;
-		case eAlarmOutDelayTime:
-		{
-			nRet = MPU_DOP_SetDelayTime(0, nValue);
-		}
-		break;
-		case eHorizontalAngle:
-		{
-			nRet = MPU_PTZ_SetHorizontalAngle(0, nValue);
-		}
-		break;
-		case eVerticalAngle:
-		{
-			nRet = MPU_PTZ_SetVerticalAngle(0, nValue);
-		}
-		break;
-		case eMotoSpeedH:
-		{
-			nRet = MPU_PTZ_SetSpeedH(nValue, 0);
-		}
-		break;
-		case eMotoSpeedV:
-		{
-			nRet = MPU_PTZ_SetSpeedV(nValue, 0);
-		}
-		break;
-        case eHorizontalStep:
-		{
-			nRet = MPU_PTZ_SetHorizontalStep(0, nValue);
-		}
-		break;
-		case eVerticalStep:
-		{
-			nRet = MPU_PTZ_SetVerticalStep(0, nValue);
-		}
-		break;
-		case eUserVMaxStep:
-		{
-            nRet = MPU_PTZ_SetUserVMaxStep( 0, nValue);
-		}
-		break;
-		case eHorizontalReverse:
-		{
-			nRet = MPU_PTZ_SetHorizontalReverse(0, nValue);
-		}
-		break;
-		case eVerticalReverse:
-		{
-			nRet = MPU_PTZ_SetVerticalReverse(0, nValue);
-		}
-		break;
+        break;
         case eLensOrientation:
         {
             nRet = ZWSys_SetLensOrientation((unsigned int)nValue);
@@ -522,61 +469,23 @@ static int ChangeCustomAblity(eCustomAblitySet eCustomNo, int nValue)
 	CConfig *pCfgFile = CConfig::GetInstance();
 
 	switch (eCustomNo)
-	{
-		case eSupportVertical:
-		{
-			nRet = MPU_PTZ_SetSupportVertical(0, nValue);
-		}
-		break;
-		case eSupportDigitZoom:
-		{
-			pCfgFile->SetValue("FunctionSupport", "IsSupportDigitZoom", nValue);
-			pCfgFile->SaveFile();
-		}
-		break;
-		case eSupportMotor: /*等所有参数定制好后，再进行自检*/
-		{
-			nRet = MPU_PTZ_SetSupportMotor(0, nValue);
-
-			int m_nHorizontalAngle = 0;
-			int m_nVerticalAngle = 0;
-			int m_nHorizontalStep = 0;
-			int m_nVerticalStep = 0;
-			char szSectionName[20];
-
-			snprintf(szSectionName, sizeof(szSectionName), "PTZ_Set_%d", 0);
-			m_nHorizontalAngle = pCfgFile->GetValue(szSectionName, "HorizontalAngle", 198);
-			m_nVerticalAngle = pCfgFile->GetValue(szSectionName, "VerticalAngle", 0);
-			m_nHorizontalStep = pCfgFile->GetValue(szSectionName, "HorizontalStep", 396);
-			m_nVerticalStep = pCfgFile->GetValue(szSectionName, "VerticalStep", 128);
-
-			if (1 == nValue)
-			{
-				if ((m_nHorizontalAngle > m_nHorizontalStep) || (m_nVerticalAngle > m_nVerticalStep))
-				{
-					m_nHorizontalAngle = m_nHorizontalStep / 2;
-					m_nVerticalAngle = m_nVerticalStep / 2;
-				}
-				pCfgFile->SetValue("FunctionSupport", "IsSupportMotor", nValue);
-				pCfgFile->SaveFile();
-			}
-		}
-		break;
-		case eSupportAlarmOut:
-		{
-			nRet = ZWSys_AlarmOutSupport(nValue);
-		}
-		break;
-        case ebSptSwapLRViewChannel:
-        {
-            ZWSys_SetSptSwapLRPTZChannel(nValue);
-        }
-        break;
-        case ebSptSwapLRPTZChannel:
-        {
-            MPU_PTZ_SetPTZDevSwapLRPTZChannel(nValue);
-        }
-        break;
+    {
+    case eSupportDigitZoom:
+    {
+        pCfgFile->SetValue("FunctionSupport", "IsSupportDigitZoom", nValue);
+        pCfgFile->SaveFile();
+    }
+    break;
+    case eSupportAlarmOut:
+    {
+        nRet = ZWSys_AlarmOutSupport(nValue);
+    }
+    break;
+    case ebSptSwapLRViewChannel:
+    {
+        ZWSys_SetSptSwapLRPTZChannel(nValue);
+    }
+    break;
 #ifdef __ONE_CLICK_CALL__
 		case eSupportResetButton:
 		{
@@ -592,9 +501,9 @@ static int ChangeCustomAblity(eCustomAblitySet eCustomNo, int nValue)
 		default:
 			JSON_ERROR("eCustomNo error eCustomNo = %d\n", eCustomNo);
 			break;
-	}
+        }
 
-	return nRet;
+        return nRet;
 }
 
 //!\brief 配置实现命令

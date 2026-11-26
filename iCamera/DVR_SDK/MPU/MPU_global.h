@@ -398,24 +398,4 @@ int MPU_GetCloudStorageMode(int *mode);
 int GetCustomCloudStorageMode();
 #endif
 
-#ifdef __DIGITAL_ZOOM_DRAG_SUPPORT__
-//!\brief   ZOOM初始化
-//!\return  0表示成功，其它为错误码
-int ZOOM_Init();
-
-//!\brief   逆初始化变倍管理
-//!\return  0表示成功，其它为错误码
-int ZOOM_Uninit();
-#endif
-
-#if defined(__IS_SUPPORT_LCD_MANAGER__)
-//!\brief   LCD初始化
-//!\return  0表示成功，其它为错误码
-int LCD_Init();
-
-//!\brief   逆初始化LCD管理
-//!\return  0表示成功，其它为错误码
-int LCD_Uninit();
-#endif
-
 #endif							//_INC_MPU_GLOBAL_H_

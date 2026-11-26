@@ -1960,22 +1960,6 @@ int MPU_AVL_SetDetectAreaOverlayInfo(int nCh, int nMainStreamOverlay, int nSubSt
 	MPU_AVL_CALL(HumanShape_SetDetectAreaOverlayInfo(nCh, nMainStreamOverlay, nSubStreamOverlay));
 }
 
-/*@breif MPU_AVL_GetHumanformTrackEnable  获取人形跟踪使能状态
- *@return 使能开启=1，使能关闭=0 失败为-1
- */
-int MPU_AVL_GetHumanformTrackEnable(int nChn)
-{
-	MPU_AVL_GET(int, 0, GetHumanShapeTrackEnable(nChn));
-}
-
-/*@breif MPU_AVL_SetHumanformTrackEnable  设置人形跟踪使能状态
- *@return 0=成功，-1=失败
- */
-int MPU_AVL_SetHumanformTrackEnable(int nChn,int iEable)
-{
-	MPU_AVL_CALL(SetHumanShapeTrackEnable(nChn, iEable));
-}
-
 //!\brief   设置音频输入为mic输入还是line in输入
 //!\param   mode   模式
 //!\return  成功为0，其它为错误码
@@ -2322,28 +2306,6 @@ int MPU_AVL_UploadPictureToSdCard(int nChn, const char *pic_name, unsigned int t
     MPU_AVL_CALL(UploadPictureToSdCard(nChn, pic_name, trig_type));
 }
 
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-int MPU_AVL_GetTrackStayTime(int nCh, int *nStayTimeSec)
-{
-	MPU_AVL_CALL(GetTrackStayTime(nCh, nStayTimeSec));
-}
-
-int MPU_AVL_SetTrackStayTime(int nCh, int nStayTimeSec)
-{
-	MPU_AVL_CALL(SetTrackStayTime(nCh, nStayTimeSec));
-}
-
-int MPU_AVL_GetTrackStatCfg(int nCh, int *trackEnable, int *linkAction)
-{
-	MPU_AVL_CALL(GetTrackStatCfg(nCh, trackEnable, linkAction));
-}
-
-int MPU_AVL_SetTrackLinkStart(int nCh, int linkStart)
-{
-	MPU_AVL_CALL(SetTrackLinkStart(nCh, linkStart));
-}
-#endif
-
 int MPU_AVL_TriggerEvent(int nCh, unsigned long dwEventType, unsigned long dwSubEventType, unsigned long dwParam1, unsigned long dwParam2, unsigned long dwParam3, char * pBuffer, unsigned long dwBufferLen)
 {
     MPU_AVL_CALL(TriggerEvent(nCh, dwEventType, dwSubEventType, dwParam1, dwParam2, dwParam3, pBuffer, dwBufferLen));
@@ -2376,18 +2338,6 @@ int MPU_AVL_SoundDetect_GetCfg(int nCh, int *pEnable, int *pSentive)
 {
 	MPU_AVL_CALL(SoundDetect_GetCfg(nCh, pEnable, pSentive));
 }
-
-#if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__)
-int MPU_AVL_GetTrackZoomEnable(int nCh, int *nEnable)
-{
-	MPU_AVL_CALL(GetTrackZoomEnable(nCh, nEnable));
-}
-
-int MPU_AVL_SetTrackZoomEnable(int nCh, int nEnable)
-{
-	MPU_AVL_CALL(SetTrackZoomEnable(nCh, nEnable));
-}
-#endif
 
 #if defined (__IS_SUPPORT_LONGAWAYHOME__) 
 int MPU_AVL_HumanShape_GetLongAwayEnable(int nCh, int *nEnable)

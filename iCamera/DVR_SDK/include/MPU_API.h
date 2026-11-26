@@ -50,12 +50,6 @@ int MPU_Exception_IsEnableDesktopIcon(int nExceptionType);
 //网络管理相关API定义
 #include "MPU_CIU_API.h"
 
-//报警输出相关API定义
-#include "MPU_DOP_API.h"
-
-//报警输入相关API定义
-#include "MPU_DIP_API.h"
-
 //录像备份相关API定义
 #include "MPU_BAK_API.h"
 
@@ -83,9 +77,6 @@ int MPU_Exception_IsEnableDesktopIcon(int nExceptionType);
 //用户管理相关API定义
 #include "MPU_USR_API.h"
 
-//云台控制相关API定义
-#include "MPU_PTZ_API.h"
-
 //本地网络参数管理相关API定义
 #include "MPU_Net_API.h"
 
@@ -109,11 +100,5 @@ int MPU_Exception_IsEnableDesktopIcon(int nExceptionType);
 
 //云升级相关API定义
 #include "MPU_CloudUpgrade_API.h"
-
-#if defined(__DIGITAL_ZOOM_DRAG_SUPPORT__)
-//变倍相关API定义
-#include "MPU_ZOOM_API.h"
-#endif
-
 
 #endif							/* _INC_MPU_API_H_ */

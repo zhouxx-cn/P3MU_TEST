@@ -8,8 +8,4 @@
 
 int Json_TryListenAlaramAudio(char *nBuffer, int nBufferLenth, int nTestType);
 
-
-int Json_AlarmOut(char *nBuffer, int nBufferLenth, int nTestType);
-
-
 #endif

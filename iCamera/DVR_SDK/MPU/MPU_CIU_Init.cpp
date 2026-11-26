@@ -398,13 +398,6 @@ typedef struct tag_refresh_alarm_mgt
 	{
 		int nSDKRet;
 
-		//最大报警通道数
-		  m_nMaxAlarmInCh = MPU_DIP_GetPortNum();
-		if (m_nMaxAlarmInCh > DVR_MAX_ALARMIN_NUM)
-		{
-			MPU_ERR("Max ALarm In Channel Number is %d > %d\n", m_nMaxAlarmInCh, DVR_MAX_ALARMIN_NUM);
-			m_nMaxAlarmInCh = DVR_MAX_ALARMIN_NUM;
-		}
 #if SYSTEM_SUPPORT_HD_ALGO_CHANNEL >=0
 		//最大视频通道数
 		m_nMaxVideoInCh = SYSTEM_SUPPORT_HD_ALGO_CHANNEL;
@@ -2005,11 +1998,7 @@ int CIU_Init()
 	MPU_DBG("\n---MPU_CIU_Init.cpp-----CIU_Init()----...CIU_RemoteCommand_init();.......远程命令.......\n");
 	CIU_RemoteCommand_init();
 
-	//透明通道
-	MPU_DBG("\n---MPU_CIU_Init.cpp-----CIU_Init()----...CIU_TransparentChanne_Init();............透明通道........\n");
-	CIU_TransparentChanne_Init();
-
-	//启动远程服务
+    //启动远程服务
 	MPU_DBG("\n---MPU_CIU_Init.cpp-----CIU_Init()----...HieServer_Start();........启动远程服务............\n");
 	nSDKRet = HieServer_Start();
 	MPU_DBG("HieServer_Start() return %d\n", nSDKRet);

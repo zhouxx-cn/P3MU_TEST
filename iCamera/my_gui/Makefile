@@ -56,10 +56,6 @@ ifeq ($(IS_SUPPORT_WLAN),yes)
 CFLAGS += -D__IS_SUPPORT_WLAN__
 endif
 
-ifeq ($(IS_SUPPORT_ZOOM),yes)
-CFLAGS += -D__DIGITAL_ZOOM_DRAG_SUPPORT__
-endif
-
 ifeq ($(USE_MJPEG_CIRCLE_BUFFER),yes)
 CFLAGS += -D__USE_MJPEG_CIRCLE_BUFFER__
 endif

@@ -46,25 +46,6 @@ unsigned long long get_ms()
     return (unsigned long long)time_v.tv_sec * 1000 + time_v.tv_usec / 1000;
 }
 
-static void ClearLastPtzAction(int nCh)
-{
-	if (ACTION_PTZ_PRESET == g_pMpuInfo->m_dwPtzCode_AlarmAction[nCh])
-	{
-		MPU_PTZ_NormalCtrl(TTY_PTZ_STOP, 0, nCh);
-		MPU_PTZ_ClearAlarm(nCh);
-	}
-	else if (ACTION_PTZ_CRUISE == g_pMpuInfo->m_dwPtzCode_AlarmAction[nCh])
-	{
-		MPU_PTZ_AutoCtrl(TTY_PTZ_SETROUTE, 0, 0, g_pMpuInfo->m_dwCruiseIndex_AlarmAction[nCh], 0, 0, 0, nCh);
-		MPU_PTZ_ClearAlarm(nCh);
-	}
-	else if (ACTION_PTZ_TRACK == g_pMpuInfo->m_dwPtzCode_AlarmAction[nCh])
-	{
-		MPU_PTZ_AutoCtrl(TTY_PTZ_TRACKCALL, 0, 0, g_pMpuInfo->m_dwCruiseIndex_AlarmAction[nCh], 0, 0, 0, nCh);
-		MPU_PTZ_ClearAlarm(nCh);
-	}
-}
-
 static int callback_AlarmAction_GUI(struct tagAlertInfo *pAlertInfo, struct tagActionInfo *pActionInfo)
 {
 	int nSDKRet;
@@ -476,11 +457,7 @@ int callback_AlarmAction(struct tagAlertInfo *pAlertInfo, struct tagActionInfo *
 {
 	int nRet = IDVR_OK;
 
-	//控制，跟踪时围栏/越界只响应录像。默认响应所有开启的联动
-	int linkAction = 1;
-	int trackEnable = 0;
-
-	if (NULL == g_pMpuInfo)
+    if (NULL == g_pMpuInfo)
 	{
 		return IDVR_ERROR_INVALID_POINTER;
 	}
@@ -494,11 +471,8 @@ int callback_AlarmAction(struct tagAlertInfo *pAlertInfo, struct tagActionInfo *
 	MPU_CHECK_POINTER_PARAMETER(pAlertInfo);
 	MPU_CHECK_POINTER_PARAMETER(pActionInfo);
 
-#if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
-	MPU_AVL_GetTrackStatCfg(0, &trackEnable, &linkAction);
-#endif
-	 //printf("my add: --callback_AlarmAction--pAlertInfo->AlertType=%d, pActionInfo->tActionType = %d \n", pAlertInfo->AlertType, pActionInfo->tActionType);
-	switch (pActionInfo->tActionType)
+    //printf("my add: --callback_AlarmAction--pAlertInfo->AlertType=%d, pActionInfo->tActionType = %d \n", pAlertInfo->AlertType, pActionInfo->tActionType);
+    switch (pActionInfo->tActionType)
 	{
 			//1 通知界面
 		case ACTION_GUI:
@@ -540,39 +514,26 @@ int callback_AlarmAction(struct tagAlertInfo *pAlertInfo, struct tagActionInfo *
 			break;
 
 			//1 联动报警输出
-		case ACTION_ALARMOUT:
-			{
-				if (ALERT_TYPE_LONG_AWAY == pAlertInfo->AlertType)
-				{
-					/*Do NoTing*/
-				}
-				else
-				{
-					if (pAlertInfo->dwReserved)
-					{
-						MPU_CALL(MPU_DOP_SetAlarmOutState(pActionInfo->nChannel, TRUE));
-					}				
-				}
-			}			
-			break;
+            case ACTION_ALARMOUT:
+                break;
 
-		case ACTION_SCREEN:
-			{
-				int i = 0;
+            case ACTION_SCREEN:
+            {
+                int i = 0;
 
-				for (i = 0; i < MAX_SPOT_NUM + 2; i++)
-				{
+                for (i = 0; i < MAX_SPOT_NUM + 2; i++)
+                {
 					if (pActionInfo->dwReserved & (1 << i))
 					{
 						MPU_CALL(MPU_PRW_SetAlarmCh(i, pActionInfo->nChannel));
 					}
 				}
-			}
-			break;
+            }
+            break;
 
-			//1 联动声音报警
-		case ACTION_BEEP:
-			{
+                //1 联动声音报警
+            case ACTION_BEEP:
+            {
 				//MPU_SYS_KeepBuzzer(BUZZER500);
 				
 				if (pAlertInfo->dwReserved)
@@ -623,99 +584,42 @@ int callback_AlarmAction(struct tagAlertInfo *pAlertInfo, struct tagActionInfo *
 			}
 			break;
 
-			//1 联动PTZ预置点
-		case ACTION_PTZ_PRESET:
-			{
-				if ((ACTION_PTZ_PRESET != g_pMpuInfo->m_dwPtzCode_AlarmAction[pActionInfo->nChannel])
-					|| (g_pMpuInfo->m_dwCruiseIndex_AlarmAction[pActionInfo->nChannel] != pActionInfo->dwReserved))
-				{
-					ClearLastPtzAction(pActionInfo->nChannel);
+                //1 联动抓图
+            case ACTION_SNAPSHOT:
+            {
+                if (ALERT_TYPE_LONG_AWAY == pAlertInfo->AlertType)
+                {
+                    /*Do NoTing*/
+                }
+                else
+                {
+                    if (pAlertInfo->dwReserved)
+                    {
+                        MPU_AVL_Pic_Capture(pActionInfo->nChannel, TRUE, pAlertInfo->AlertType, pAlertInfo->nChannel);
+                    }
+                }
+            }
+            break;
 
-					//MPU_DBG("ACTION_PTZ_PRESE, nCh %d, Index %lu\n", pActionInfo->nChannel, pActionInfo->dwReserved);
-
-					MPU_PTZ_PresetCtrl(TTY_PTZ_PRESETCALL, pActionInfo->dwReserved, 0, 0, 0, pActionInfo->nChannel);
-					MPU_PTZ_Alarm(pActionInfo->tActionType, pActionInfo->dwReserved, pActionInfo->nChannel);
-
-					g_pMpuInfo->m_dwPtzCode_AlarmAction[pActionInfo->nChannel] = ACTION_PTZ_PRESET;
-					g_pMpuInfo->m_dwCruiseIndex_AlarmAction[pActionInfo->nChannel] = pActionInfo->dwReserved;
-				}
-			}
-			break;
-
-			//1 联动PTZ巡航
-		case ACTION_PTZ_CRUISE:
-			{
-				if ((ACTION_PTZ_CRUISE != g_pMpuInfo->m_dwPtzCode_AlarmAction[pActionInfo->nChannel])
-					|| (g_pMpuInfo->m_dwCruiseIndex_AlarmAction[pActionInfo->nChannel] != pActionInfo->dwReserved))
-				{
-					ClearLastPtzAction(pActionInfo->nChannel);
-
-					//MPU_DBG("TTY_PTZ_SETROUTE, nCh %d, Index %lu\n", pActionInfo->nChannel, pActionInfo->dwReserved);
-
-					MPU_PTZ_AutoCtrl(TTY_PTZ_SETROUTE, 0, 0, pActionInfo->dwReserved, 0, 0, 1, pActionInfo->nChannel);
-					MPU_PTZ_Alarm(pActionInfo->tActionType, pActionInfo->dwReserved, pActionInfo->nChannel);
-
-					g_pMpuInfo->m_dwPtzCode_AlarmAction[pActionInfo->nChannel] = ACTION_PTZ_CRUISE;
-					g_pMpuInfo->m_dwCruiseIndex_AlarmAction[pActionInfo->nChannel] = pActionInfo->dwReserved;
-				}
-			}
-			break;
-
-			//1 联动PTZ轨迹
-		case ACTION_PTZ_TRACK:
-			{
-				if ((ACTION_PTZ_TRACK != g_pMpuInfo->m_dwPtzCode_AlarmAction[pActionInfo->nChannel])
-					|| (g_pMpuInfo->m_dwCruiseIndex_AlarmAction[pActionInfo->nChannel] != pActionInfo->dwReserved))
-				{
-					ClearLastPtzAction(pActionInfo->nChannel);
-
-					//MPU_DBG("TTY_PTZ_TRACKCALL, nCh %d, Index %lu\n", pActionInfo->nChannel, pActionInfo->dwReserved);
-
-					MPU_PTZ_AutoCtrl(TTY_PTZ_TRACKCALL, 0, 0, pActionInfo->dwReserved, 0, 0, 1, pActionInfo->nChannel);
-					MPU_PTZ_Alarm(pActionInfo->tActionType, pActionInfo->dwReserved, pActionInfo->nChannel);
-
-					g_pMpuInfo->m_dwPtzCode_AlarmAction[pActionInfo->nChannel] = ACTION_PTZ_TRACK;
-					g_pMpuInfo->m_dwCruiseIndex_AlarmAction[pActionInfo->nChannel] = pActionInfo->dwReserved;
-				}
-			}
-			break;
-
-			//1 联动抓图
-		case ACTION_SNAPSHOT:
-			{
-				if (ALERT_TYPE_LONG_AWAY == pAlertInfo->AlertType)
-				{
-					/*Do NoTing*/
-				}
-				else
-				{
-					if (pAlertInfo->dwReserved)	
-					{
-						MPU_AVL_Pic_Capture(pActionInfo->nChannel, TRUE, pAlertInfo->AlertType, pAlertInfo->nChannel);
-					}
-				}
-			}
-			break;
-
-			//联动推送
-		case ACTION_PUSH:
-			{
-				if (pAlertInfo->dwReserved)
-				{
-					MPU_CALL(callback_AlarmAction_Push(pAlertInfo->nChannel,pAlertInfo, pActionInfo));
-				}
-			}
-			break;
-		case ACTION_PTZ:		//1 联动云台控制
-		case ACTION_SMS:		//1 联动短信通知
-		default:
-			{
-				MPU_ERR("unsupported ActionType = %d\n", pActionInfo->tActionType);
-				MPU_CHK(FALSE);
+                //联动推送
+            case ACTION_PUSH:
+            {
+                if (pAlertInfo->dwReserved)
+                {
+                    MPU_CALL(callback_AlarmAction_Push(pAlertInfo->nChannel, pAlertInfo, pActionInfo));
+                }
+            }
+            break;
+            case ACTION_PTZ: //1 联动云台控制
+            case ACTION_SMS: //1 联动短信通知
+            default:
+            {
+                MPU_ERR("unsupported ActionType = %d\n", pActionInfo->tActionType);
+                MPU_CHK(FALSE);
 				nRet = IDVR_ERROR_UNSUPPORT;
-			}
-			break;
-	}
+            }
+            break;
+            }
 
 #if defined (__IS_SUPPORT_PTZ_BUILTIN__) && defined (__IS_SUPPORT_PTZ_BUILTIN_HUMAN_TRACK__)
 	//if (!linkAction)
@@ -736,35 +640,25 @@ int MPU_ClearAlarm()
 	//清除声音
 	MPU_SYS_KeepBuzzer(NOBUZZER);
 
-	//清除报警输出
-	nCount = MPU_DOP_GetPortNum();
-	for (i = 0; i < nCount; ++i)
-	{
-		MPU_DOP_SetAlarmOutState(i, 0);
-	}
+    //清除屏幕联动
+    for (i = 0; i < MAX_SPOT_NUM + 2; i++)
+    {
+        MPU_PRW_ClearAlarm(i);
+    }
 
-	//清除屏幕联动
-	for (i = 0; i < MAX_SPOT_NUM + 2; i++)
-	{
-		MPU_PRW_ClearAlarm(i);
-	}
-
-
-	//清除PTZ联动
+    //清除PTZ联动
 	if (NULL != g_pMpuInfo)
 	{
 		nCount = MAX_ENC_CHANNEL_NUM;
 
 		for (i = 0; i < nCount; ++i)
-		{
-			ClearLastPtzAction(i);
+        {
+            g_pMpuInfo->m_dwPtzCode_AlarmAction[i] = 0;
+            g_pMpuInfo->m_dwCruiseIndex_AlarmAction[i] = 0;
+        }
+    }
 
-			g_pMpuInfo->m_dwPtzCode_AlarmAction[i] = 0;
-			g_pMpuInfo->m_dwCruiseIndex_AlarmAction[i] = 0;
-		}
-	}
-
-	return IDVR_OK;
+    return IDVR_OK;
 }
 
 //!\brief       设置异常处理是否显示桌面图标

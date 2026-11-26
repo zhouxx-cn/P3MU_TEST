@@ -1519,12 +1519,7 @@ int GetDevCustom_User(LPHY_DVR_WORKMODE pcfg)
 
 int GetDevCustom_Alarm(LPHY_DVR_WORKMODE pcfg)
 {
-	//! 本结构体是否有效，=0表示无效
-	pcfg->bValid = 1;
-
-	pcfg->nWorkMode = MPU_DIP_GetMode();
-
-	return IDVR_OK;
+    return IDVR_OK;
 }
 
 int GetDevCustom_Pic(LPHY_DVR_WORKMODE pcfg)
@@ -1582,22 +1577,8 @@ int SetDevCustom_User(LPHY_DVR_WORKMODE pcfg)
 
 int SetDevCustom_Alarm(LPHY_DVR_WORKMODE pcfg)
 {
-	int nSDKRet;
-
-	//! 本结构体是否有效，=0表示无效
-	if (0 == pcfg->bValid)
-	{
-		MPU_DBG("0 == pcfg->bValid\n");
-		return IDVR_CIU_STRUCT_UNVALID;
-	}
-
-	nSDKRet = MPU_DIP_SetMode(pcfg->nWorkMode);
-	MPU_CHK(0 == nSDKRet);
-
-	nSDKRet = MPU_DOP_SetMode(pcfg->nWorkMode);
-	MPU_CHK(0 == nSDKRet);
-
-	return (0 == nSDKRet) ? IDVR_OK : IDVR_CIU_CALLSDK_FAIL;
+    int nSDKRet;
+    return (0 == nSDKRet) ? IDVR_OK : IDVR_CIU_CALLSDK_FAIL;
 }
 
 int SetDevCustom_Pic(LPHY_DVR_WORKMODE pcfg)
@@ -2669,10 +2650,9 @@ int CIU_GetConfigure_DevConfig(DWORD dwUserID, DWORD dwMajorType, DWORD dwMinorT
 			    MPU_AVL_GetPushEventIntvCnt(pcfg->nChannelID, ALERT_TYPE_MOTION, &pcfg->nMotionInterval);
 				MPU_AVL_GetPushEventIntvCnt(pcfg->nChannelID, ALERT_TYPE_HUMANSHAPE, &pcfg->nPeopleInterval);
                 MPU_AVL_GetPushEventIntvCnt(pcfg->nChannelID, ALERT_TYPE_SOUNDDETECT, &pcfg->nPeopleInterval);
-                MPU_DIP_GetPushEventIntvCnt(0,&pcfg->nAlarmInInterval);
-				//MPU_ERR("pcfg->nMotionInterval :%d pcfg->iAreaDetectInterval :%d pcfg->iCrossBorderDetectInterval :%d \n", pcfg->nMotionInterval, pcfg->iAreaDetectInterval, pcfg->iCrossBorderDetectInterval);
-			}
-			break;
+                //MPU_ERR("pcfg->nMotionInterval :%d pcfg->iAreaDetectInterval :%d pcfg->iCrossBorderDetectInterval :%d \n", pcfg->nMotionInterval, pcfg->iAreaDetectInterval, pcfg->iCrossBorderDetectInterval);
+            }
+            break;
 			
 		// 获取辅助接口控制开关状态
 		case DEVICECFG_ASSISTANT_INTERFACE_CONTROL:
@@ -3132,12 +3112,11 @@ int CIU_SetConfigure_DevConfig(DWORD dwUserID, DWORD dwMajorType, DWORD dwMinorT
 				//MPU_AVL_SetPushEventIntvCnt(pcfg->nChannelID, ALERT_TYPE_HUMANSHAPE, pcfg->nAssistLineInterval);  //人形，和拌线一致，直接用人形进行设置/获取
 				MPU_AVL_SetPushEventIntvCnt(pcfg->nChannelID, ALERT_TYPE_HUMANSHAPE, pcfg->nPeopleInterval);
                 MPU_AVL_SetPushEventIntvCnt(pcfg->nChannelID, ALERT_TYPE_SOUNDDETECT, pcfg->nPeopleInterval);
-				MPU_DIP_SetPushEventIntvCnt(0, pcfg->nAlarmInInterval);
-			}
-			break;
-        
-		default:
-			{
+            }
+            break;
+
+            default:
+            {
 				nRet = IDVR_CIU_UNSUPPORTED_MINORTYPE;
 				MPU_ERR("unsupported dwMinorType = %lu\n", dwMinorType);
 			}
