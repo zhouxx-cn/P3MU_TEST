@@ -418,9 +418,6 @@ PSS_API int API_CALL ZW_PkgSd_DataPopSetKeyFrame(HANDLE hDataPopper, BOOL bKeyFr
 
 PSS_API int API_CALL ZW_Pkg_SetSegType(int seg_rec_type);
 
-/* 触发录像完毕之后，发送消息的回调函数 */
-PSS_API int API_CALL ZW_Pkg_SetTrigRecordOverCallBack(int (*CallBack)(unsigned char *));
-
 /* 开启录像 */
 PSS_API int API_CALL ZW_Pkg_StartRecord(int record_type, int bH265);
 
@@ -521,15 +518,6 @@ PSS_API int API_CALL ZW_PkgSd_GetCurrentPicListInfo(int read_pic_page, void **p_
 
 /* 获取磁盘资源占用情况(单位: MB) */
 PSS_API int API_CALL ZW_PkgSd_GetDiskResourceSize(int *pRecordMB, int *pPictureMB);
-
-/* 获取录像存放的比例(范围0~100) */
-PSS_API int API_CALL ZW_PkgSd_GetVideoUsedSpaceRate(void);
-
-/* 设置录像存放的比例(范围0~100) */
-PSS_API int API_CALL ZW_PkgSd_SetVideoUsedSpaceRate(int nVideoSpace);
-
-/* 设置录像尺寸 */
-PSS_API int API_CALL ZW_PkgSd_SetRecordSize(int width, int height, int bH265);
 
 /*@breif ZW_PkgSd_GetFileReadWriteStatus 获取当前文件的读写状态
  *@param [IN]  file_name 需要操作的文件名(绝对路径)

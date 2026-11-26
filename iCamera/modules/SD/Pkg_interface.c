@@ -422,21 +422,6 @@ PSS_API int API_CALL ZW_Pkg_SetSegType(int  seg_rec_type)
     return 0;
 }
 
-/* 触发录像完毕之后，发送消息的回调函数 */
-PSS_API int API_CALL ZW_Pkg_SetTrigRecordOverCallBack(int (*CallBack)(unsigned char *))
-{
-    if(!binited)
-    {
-        return -1;
-    }
-
-    PKG_CHECK_PAUSE (s_pkg_pause, -1);
-
-    SetTrigRecordOverCallBack(CallBack);
-
-    return 0;
-}
-
 /* 开启录像 */
 PSS_API int API_CALL ZW_Pkg_StartRecord(int record_type, int bH265)
 {
@@ -513,27 +498,6 @@ PSS_API int API_CALL ZW_Pkg_GetRecordDelayTime (unsigned int *pnDelaySecs)
 
     int ret = MEMRECORD_GetDelayTime (pnDelaySecs);
     return ret ;
-}
-
-/*!
- * \brief 将数据写入SD卡
- * \param wFrameType 数据帧类型  *
- * \param pFirstBuf 写入的一帧数据
- * \param iFirstLength 写入的一帧数据长度
- * \return 成功返回0，失败返回小于0的错误码
- */
-PSS_API int API_CALL ZW_PkgSd_DataInput(const char *pFirstBuf, int iFirstLength)
-{
-    if(!binited)
-    {
-        return 0;
-    }
-
-    PKG_CHECK_PAUSE (s_pkg_pause, -1);
-
-	int ret = RawDataWirteProcess(iFirstLength, pFirstBuf);
-    
-    return ret;
 }
 
 /* 传入的图片名字组成pic_name: 时间戳_标号，如:1532477851_01需要改为1532477851 */
@@ -774,45 +738,6 @@ PSS_API int API_CALL ZW_PkgSd_GetDiskResourceSize(int *pRecordMB, int *pPictureM
     PKG_CHECK_PAUSE (s_pkg_pause, -1);
 
     return GetDiskResourceSize(pRecordMB, pPictureMB);
-}
-
-/* 获取录像存放的比例(范围0~100) */
-PSS_API int API_CALL ZW_PkgSd_GetVideoUsedSpaceRate(void)
-{
-    if(!binited)
-    {
-        return -1;
-    }
-
-    PKG_CHECK_PAUSE (s_pkg_pause, -1);
-
-    return GetVideoUsedSpaceRate();
-}
-
-/* 设置录像存放的比例(范围0~100) */
-PSS_API int API_CALL ZW_PkgSd_SetVideoUsedSpaceRate(int nVideoSpace)
-{
-    if(!binited)
-    {
-        return -1;
-    }
-
-    PKG_CHECK_PAUSE (s_pkg_pause, -1);
-
-    return SetVideoUsedSpaceRate(nVideoSpace);
-}
-
-/* 设置录像尺寸 */
-PSS_API int API_CALL ZW_PkgSd_SetRecordSize(int width, int height, int bH265)
-{
-    if(!binited)
-    {
-        return -1;
-    }
-
-    PKG_CHECK_PAUSE (s_pkg_pause, -1);
-
-    return SetRecordSize(width, height, bH265);
 }
 
 /*@breif ZW_PkgSd_GetFileReadWriteStatus 获取当前文件的读写状态
@@ -1649,24 +1574,8 @@ void *Do_Thread_pop_stream(HANDLE hDataPopper)
                 continue;
             }
             if (pbuffer)
-            {
-#if 0
-                /* 如果抛出的帧的时间戳小于搜索的最前时间，则跳过丢弃该帧 */
-                if (tFrameTimeSec < thread_pop_config[num].u_search_start_time)
-                {
-                    printf("Warning: tFrameTimeSec=%d, thread_pop_config[%d].u_search_start_time=%d\n", 
-                            tFrameTimeSec, num, thread_pop_config[num].u_search_start_time);
-                    //usleep(500);
-                    //continue;
-                }
+            {				
 
-                /* 如果抛出的帧的时间戳大于搜索的最后时间且是I帧(避免I帧间隔太大造成I帧后面的P帧丢失的情况)，则停止回放 */
-                if (tFrameTimeSec > thread_pop_config[num].u_search_stop_time)
-                {
-                    printf("************search time is arrival, pop over*********\n");
-                    goto outThread;
-                }
-#endif
                 /* 如果需要只弹出I帧，则需要丢弃非I帧数据(只是一个命令) */
 				/*支持smartP产品需要排除smartP的VIP帧，VIP帧不能抛弃*/
                 if (thread_pop_config[num].b_pop_iframe && (!bKeyFrame) && VipFrame != 1)

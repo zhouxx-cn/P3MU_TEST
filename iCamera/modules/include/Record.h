@@ -46,7 +46,6 @@ typedef struct tagRecordInterface
 extern "C" {
 #endif
 
-#ifdef __USE_CIRCLEQUEUE__
 	/*!
 	* @brief
 	*	设置录像取流数据回调
@@ -57,8 +56,7 @@ extern "C" {
 	* @note
 	*	接口类型: 阻塞式
 	*/
-	int MemRecord_SetRecordInterface(const LPRecordInterface pInterface);
-#endif	
+	int REC_SetRecordInterface(const LPRecordInterface pInterface);	
 
     typedef struct tagMemRecordInitParam
     {
@@ -107,7 +105,10 @@ extern "C" {
     int SetTrigRecordType(int record_type);
     
     /* 开始录像 */
-    void StartRecord(int record_type, int bH265);
+    int REC_Start (int record_type, int bH265);
+	
+    /* 停止录像 */
+    int REC_Stop ();
 
     /*@breif SetRecordStatus 设置录像的写入状态
      *@param IN status 写入状态 0:暂停  1:继续写入 参见enumRecStatus
