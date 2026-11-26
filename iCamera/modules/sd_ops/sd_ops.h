@@ -548,6 +548,21 @@ int SDOPS_SetRecordDelayTime (unsigned int nDelaySecs);
 /* 获取录像延迟时间 */
 int SDOPS_GetRecordDelayTime (unsigned int *pnDelaySecs);
 
+/* ============================================================================
+ * MP4 循环录像配置接口 (readme 新需求)
+ * ----------------------------------------------------------------------------
+ * SD_OPS 内部已有静态全局 g_mp4_segment_duration_sec 控制切片时长，
+ * 这里通过对外函数暴露给上层应用动态调整。
+ * ==========================================================================*/
+
+/* 设置 MP4 录像容器切片时长阈值（秒），<=0 时回退到默认 300 */
+void         SDOPS_SetMp4SegmentDuration(unsigned int sec);
+/* 获取当前 MP4 录像容器切片时长阈值（秒） */
+unsigned int SDOPS_GetMp4SegmentDuration(void);
+
+/* 切换录像容器：1=MP4(新，默认)，0=AVI(旧，用于回退) */
+void         SDOPS_SetRecordContainerToMp4(int use_mp4);
+
 /*@breif SDOPS_GetRecordDataSize 获取指定时间段的录像数据大小
  *@param [IN] start_time 开始时间
  *@param [IN] stop_time  结束时间

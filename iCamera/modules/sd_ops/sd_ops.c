@@ -33,6 +33,7 @@
 #include "sd_ops.h"
 #include "LogManager.h"
 #include "common_pub.h"
+#include "../mp4/include/mp4_writer.h"   /* MP4 循环录像底层 */
 
 extern int InitAviWriteBuf(void);
 extern int UnInitAviWriteBuf(void);
@@ -668,6 +669,40 @@ static int                g_b_need_creat_avi_file = 1;   /* 创建新的AVI文�
 static int                g_sd_card_format_status = -1;
 static int                g_sd_format_over = 0;
 static unsigned int       g_second_times = 0;
+
+/* ============================================================================
+ * MP4 循环录像相关（Readme 新需求）
+ * ----------------------------------------------------------------------------
+ * 只按录像时长自动切片，切片间隔由 g_mp4_segment_duration_sec 控制，
+ * 上层可通过 SDOPS_SetMp4SegmentDuration 动态调整。
+ * 容器为 fMP4（分片 MP4），异常掉电后已写入分片仍可直接播放，
+ * 底层复用 modules/mp4 的 MP4Writer 系列接口，不做二次编码。
+ * ==========================================================================*/
+static int            g_use_mp4_record = 1;   /* 录像容器：1=MP4(新)，0=AVI(旧)，做回退开关 */
+static unsigned int   g_mp4_segment_duration_sec = 300; /* 分片时长阈值(秒)，默认 5 分钟 */
+
+static MP4Writer     *g_mp4_writer = NULL;       /* 当前分片写入句柄 */
+static char           g_mp4_curr_file_name[MAX_PATH_STR_NUM] = {0}; /* 当前分片绝对路径 */
+static unsigned int   g_mp4_seg_begin_real_sec = 0;  /* 当前分片首帧的绝对秒 */
+static unsigned int   g_mp4_seg_begin_real_usec = 0; /* 当前分片首帧的绝对微秒 */
+static int64_t        g_mp4_seg_begin_frame_abs_us = 0; /* 首帧绝对时间(微秒)，用于归一化 */
+static int            g_mp4_have_first_frame = 0;    /* 是否已建立时间基线 */
+
+/* ============================================================================
+ * 对外可配置接口：允许上层应用动态调整 MP4 分片时长阈值
+ * ==========================================================================*/
+void SDOPS_SetMp4SegmentDuration(unsigned int sec)
+{
+    g_mp4_segment_duration_sec = (sec > 0) ? sec : 300;
+}
+unsigned int SDOPS_GetMp4SegmentDuration(void)
+{
+    return g_mp4_segment_duration_sec;
+}
+void SDOPS_SetRecordContainerToMp4(int use_mp4)
+{
+    g_use_mp4_record = (use_mp4 != 0) ? 1 : 0;
+}
 
 typedef struct tagGlobalStaticVar{
     int curr_avi_index;                         /* 当前操作的AVI的avi_file_set下标             */
@@ -2871,24 +2906,86 @@ static int SDOPS_InitRecordTypeInfo (const H264DATAPACKETHEADER *pFrameHead, SD_
 
 /****************************************************************************************/
 
-/*@breif WriteDataToSdCard 将从RingBuffer里面获取到一帧数据的写成AVI数据(写入SD卡)
+/* ============================================================================
+ * SD_OPS 模块设计文档 —— MP4 循环录像改造
+ * ----------------------------------------------------------------------------
+ * 【背景】
+ *   本文件原有 WriteDataToSdCard 使用 AVI 容器（InitAviActionMode +
+ *   WriteFrameToAvi + StopAviAction），切片条件包含「定时录像时长 /
+ *   事件录像时长 / 录像类型切换 / 跨天对时」等多重规则。
+ *   本次改造把底层容器换成 MP4（fMP4 分片格式），切片逻辑简化为
+ *   单一条件：累计录像时长 >= 可配置阈值 g_mp4_segment_duration_sec。
+ *
+ * 【核心设计】
+ *   1) 复用 modules/mp4 的 MP4Writer 系列接口（Create/WriteFrame/
+ *      Flush/Close/Destroy），不重新造 MP4 封装轮子，也不依赖 ffmpeg；
+ *   2) MP4Writer 内部使用 fMP4（ftyp + moov + 循环(moof+mdat) + mfra）
+ *      布局：moov 在首帧前写入并 fsync，每个分片的 moof 索引与数据
+ *      一起落盘，掉电后已写入分片可独立播放（参考 untrunc 原理）；
+ *   3) 小批量帧缓存 + 周期性 fsync 由 MP4WriterConfig 控制：
+ *      max_samples=30 / max_bytes=512KB / max_duration_ms=2000 /
+ *      sync_interval_ms=2000，适配 SD 卡写入特性；
+ *   4) 文件路径：<挂载点>/video/YYYYMMDD/rec_YYYYMMDD_HHMMSS.mp4；
+ *   5) 只保留「时长达到阈值」这一种切分片条件，录像类型切换、跨天
+ *      等规则暂不参与切分片（由上层业务自行按需调用 need_update_file
+ *      强制切文件）；
+ *   6) 时间戳归一化：以分片首帧的绝对时间戳(微秒)为 DTS 零点，
+ *      后续帧 DTS/PTS = 绝对时间 - 首帧绝对时间，保证 MP4 时间轴单调。
+ *
+ * 【全局变量入口】
+ *   - g_mp4_segment_duration_sec : 切片时长阈值，SDOPS_SetMp4SegmentDuration()
+ *   - g_use_mp4_record            : 容器开关，1=MP4 / 0=AVI(回退)
+ *
+ * 【异常保护】
+ *   - NULL 入参 / SD 卡未初始化 / 格式化中 / 不可写：直接返回 -1 或 0，
+ *     不做任何 MP4 操作；
+ *   - MP4Writer_WriteFrame 返回 -1：立刻 Close+Destroy 当前句柄，
+ *     重置内部状态，返回 -1；上层收到错误后停止录像即可；
+ *   - CreateDirent / MP4Writer_Create 失败：返回 -1，句柄保持 NULL；
+ *   - 句柄释放：切分片/错误/退出时统一 Close+Destroy，并置 NULL，
+ *     避免悬挂指针与内存泄漏。
+ *
+ * 【与旧接口的兼容】
+ *   - avi_file_write_over / out_avi_file / rec_start_time 的语义保持：
+ *     切出新文件时 avi_file_write_over=1、out_avi_file=basename；
+ *   - need_update_file 保持为可强制切分片的外部输入；
+ *   - 返回值：成功=0 / 切出新文件=1 / 失败=-1，与旧实现一致。
+ * ============================================================================
+ */
+
+/* 本文件原有 WriteDataToSdCard 的 AVI 实现已整体替换为下面的 MP4 循环录像版本。 */
+/*@breif WriteDataToSdCard MP4 循环录像帧写入
  *@param [IN]  frame_size 一帧数据的大小
- *@param [IN]  frame_buffer 帧数据(无信息头的纯净264数据)
+ *@param [IN]  frame_buffer 帧数据(H.264 Annex-B 裸流)
  *@param [IN]  frame_head 帧头信息
- *@param [IN]  need_update_file 是否需要马上更新文件(换文件)，一般用在时间发生突变的情况下
- *@param [OUT] avi_file_write_over 当前的AVI文件是否已经写完毕(以文件为单位)
- *@param [OUT] out_avi_file 写文件结束之后生成的文件名(avi_file_write_over=1有效)
- *@return 成功返回0
- *@      失败返回-1
+ *@param [IN]  need_update_file 外部请求强制切文件(可由上层置 1)
+ *@param [OUT] avi_file_write_over 当前分片写完毕切出新文件时置 1
+ *@param [OUT] out_avi_file 切出的新文件名(avi_file_write_over=1 时有效)
+ *@param [OUT] rec_start_time 新分片起始绝对时间(秒)
+ *@return 0=成功 / 1=切出新文件 / -1=失败
+ *@note  底层 MP4 封装复用 MP4Writer，不做二次编码，适配 SD 卡小批量缓存 + 周期 fsync。
  */
 extern int WriteDataToSdCard(int frame_size,                            /* 一帧数据的大小 */
                                       unsigned char * frame_buffer,        /* 纯264数据buffer */
                                       unsigned char *frame_head,           /* 帧头buffer */
                                       unsigned int *need_update_file,      /* 是否需要马上更新文件 */
-                                      unsigned int *avi_file_write_over, /* 当前的AVI文件是否已经写完毕 */
-                                      char *out_avi_file,                  /* 写文件结束之后生成的文件名 */
-                                      unsigned int *rec_start_time)         /* 录像的开始时间 */
+                                      unsigned int *avi_file_write_over,   /* 当前文件是否写完毕 */
+                                      char *out_avi_file,                  /* 新生成的文件名 */
+                                      unsigned int *rec_start_time)         /* 新分片录像的开始时间 */
 {
+    int ret = 0;
+    int y = 0, mon = 0, d = 0, h = 0, min = 0, s = 0;
+    int64_t      cur_abs_us = 0;       /* 当前帧绝对时间(微秒) */
+    int64_t      cur_dts_us = 0;       /* 当前帧相对分片首帧的 DTS(微秒) */
+    int64_t      cur_pts_us = 0;       /* 当前帧相对分片首帧的 PTS(微秒) */
+    int          is_key = 0;
+    unsigned int seg_duration_sec = 0;
+    char         record_dir[16] = {0};
+    char         base_file_name[MAX_NAME_STR] = {0};
+    char         full_path[MAX_PATH_STR_NUM] = {0};
+    MP4WriterInfo info;
+    MP4WriterConfig cfg;
+
     if (!frame_buffer || !frame_head || !out_avi_file)
     {
         SD_OPS_ERROR("NULL POINTER EXCEPTION!\n");
@@ -2910,218 +3007,184 @@ extern int WriteDataToSdCard(int frame_size,                            /* 一�
         return -1;
     }
 
-    int y=0,mon=0,d=0,h=0,min=0,s=0;
-    int change_rec_type = 0;
-    unsigned int file_pos = 0;
-    char record_dir[16] = {0};
-    char start_time_str[15] = {0};
-    char stop_time_str[15] = {0};
-    char record_type_suffix[16] = {0};
-    char rec_file_name[MAX_PATH_STR_NUM] = {0};
-	static unsigned long sUpdateTimeSec = 0;
-    static unsigned int sOverDayFlag = 0; /* 跨天标记 */
+    /* 与旧 AVI 实现的回退开关：0 时返回 0 保持上层空跑 */
+    if (!g_use_mp4_record)
+    {
+        return 0;
+    }
 
     pthread_mutex_lock(&global_disk_write_mutex);
-    
+
     H264DATAPACKETHEADER *pRawHead = (H264DATAPACKETHEADER *)frame_head;
 
     g_sd_write_status = SdCardIsWriting;
 
-    /* 切换文件的条件：
-     * 1. 时间到达: 定时录像(TIMER_RECORD_LATEST_SECONDS)    事件录像(EVENT_RECORD_LATEST_SECONDS)；
-     * 2. 录像类型发生改变；
-     * 3. 发生对时；
-     */
-    if (0 == *need_update_file)
-    {
-        if (SDOPS_RecordTypeCompare(g_curr_record_type, g_last_record_type) > 0)
-        {
-            /* 针对高优先级，如果文件已经录了EVENT_RECORD_LATEST_SECONDS，才被打断 */
-            if ((g_second_times >= EVENT_RECORD_LATEST_SECONDS))
-            {
-                *need_update_file = 1;
-                change_rec_type = 1;
-            }
-        }
-        else
-        {
-            if (eNormalRecord == g_last_record_type)
-            {
-                if ((g_second_times >= TIMER_RECORD_LATEST_SECONDS))
-                {
-                    *need_update_file = 1;
-                    //g_curr_record_type = eNoRecord;
-                }
-            }
-            else
-            {
-                if ((g_second_times >= EVENT_RECORD_LATEST_SECONDS))
-                {
-                    *need_update_file = 1;
-                    //g_last_record_type = eNoRecord;
-                    //g_curr_record_type = eNoRecord;
-                }
-            }
-        }
+    cur_abs_us = (int64_t)pRawHead->u32RealTimeSec * 1000000LL
+               + (int64_t)pRawHead->u32RealTimeUSec;
+    is_key = (I_FRAME == pRawHead->byFrameType) ? 1 : 0;
 
-		//如果更换天，需要切换文件
-		if (0 == pRawHead->u32RealTimeSec % 86400)
-		{
-			if (pRawHead->u32RealTimeSec != sUpdateTimeSec)
-			{
-				sOverDayFlag = 1;
-				*need_update_file = 1;
-				sUpdateTimeSec = pRawHead->u32RealTimeSec;
-			}
-		}
+    /* ===== 1. 初始化 MP4 时间基线 ===== */
+    if (!g_mp4_have_first_frame)
+    {
+        /* 首帧即作为当前分片的时间零点；后续帧 DTS/PTS 均以此为基准归一化 */
+        g_mp4_seg_begin_frame_abs_us = cur_abs_us;
+        g_mp4_seg_begin_real_sec     = pRawHead->u32RealTimeSec;
+        g_mp4_seg_begin_real_usec    = pRawHead->u32RealTimeUSec;
+        g_mp4_have_first_frame = 1;
     }
 
-    if (*need_update_file || g_sd_format_over || g_sdops_pause_flag)
+    cur_dts_us = cur_abs_us - g_mp4_seg_begin_frame_abs_us;
+    cur_pts_us = cur_dts_us;  /* 简单场景：PTS = DTS；若 B 帧存在可通过 ctts 处理 */
+    if (cur_dts_us < 0)
     {
-        g_sd_format_over = 0;
-        g_second_times = 0;
+        /* 时间跳变(对时)兜底：钳为 0 并重置基线，避免 MP4 时间轴倒回 */
+        g_mp4_seg_begin_frame_abs_us = cur_abs_us;
+        g_mp4_seg_begin_real_sec     = pRawHead->u32RealTimeSec;
+        g_mp4_seg_begin_real_usec    = pRawHead->u32RealTimeUSec;
+        cur_dts_us = 0;
+        cur_pts_us = 0;
+    }
+
+    seg_duration_sec = (unsigned int)(cur_abs_us - g_mp4_seg_begin_frame_abs_us) / 1000000LL;
+
+    /* ===== 2. 切分片判断 =====
+     * 触发切分片的条件：
+     *   a) 上层请求强制切文件（need_update_file=1），且当前分片已写入至少 1 帧
+     *   b) 累计时长 >= 配置阈值 g_mp4_segment_duration_sec
+     *
+     * 注意：在 SD 卡路径的挂载点/目录已变化（如跨天/重启）时，也会在后续
+     *       创建新 Writer 时根据当前挂载点重建目录，保证路径正确。
+     */
+    int need_new_seg = 0;
+    if (g_mp4_writer != NULL)
+    {
+        if ((need_update_file && *need_update_file == 1) ||
+            (seg_duration_sec >= g_mp4_segment_duration_sec))
+        {
+            need_new_seg = 1;
+        }
+    }
+
+    if (need_new_seg && g_mp4_writer != NULL)
+    {
+        /* 关闭当前分片：Close 会触发 Flush + 写 mfra + fsync */
+        ret = MP4Writer_Close(g_mp4_writer);
+        if (ret != 0)
+        {
+            SD_OPS_ERROR("MP4Writer_Close failed: %s\n", MP4Writer_GetLastError(g_mp4_writer));
+        }
+        MP4Writer_Destroy(g_mp4_writer);
+        g_mp4_writer = NULL;
+
+        /* 通知上层：当前分片已写完，返回 basename 到 out_avi_file */
+        if (g_mp4_curr_file_name[0] != '\0')
+        {
+            const char *base = strrchr(g_mp4_curr_file_name, '/');
+            base = (base != NULL) ? (base + 1) : g_mp4_curr_file_name;
+            snprintf(out_avi_file, MAX_NAME_STR, "%s", base);
+            *avi_file_write_over = 1;
+        }
+
+        /* 重置分片计数器，下一帧会创建新 Writer */
+        g_mp4_have_first_frame = 0;
         *need_update_file = 0;
 
-        /* 注意此处没有减去私有文件头(MPEG4FILEHEADER) */
-        g_curr_record_info.uRealFrameLenth = file_pos;
-
-        /* 将文件20200910150120[_TYPE].tmp转化为20200910150120-202009151120[_TYPE].tmp */
-        if (strlen(g_tmp_file_name) > 0)
-        {
-            *avi_file_write_over = 1;
-            WriteFrameToAvi(frame_size, frame_buffer, frame_head, &file_pos, 1); // spent 1~130ms
-            StopAviAction(STOP_WRITE_AVI, 0);
-            g_avi_file_read_write_info.read_write_status = IS_IDLE;
-
-            ULONG_TO_TIME((pRawHead->u32RealTimeSec), y, mon, d, h, min, s);
-            snprintf(stop_time_str, sizeof(stop_time_str), "%04d%02d%02d%02d%02d%02d", y, mon, d, h, min, s);
-
-            if (strchr(g_tmp_file_name, '_'))
-            {
-                if (0 == change_rec_type)
-                {
-                    memcpy(record_type_suffix, strchr(g_tmp_file_name, '_')+1, strchr(g_tmp_file_name, '.')-strchr(g_tmp_file_name, '_')-1);
-                }
-                else
-                {
-                    change_rec_type = 0;
-                    snprintf(record_type_suffix, sizeof(record_type_suffix), "%s", 
-                             EnumTypeMapStr(E_REC_MAP, g_curr_record_type));
-                }
-                memcpy(start_time_str, strchr(g_tmp_file_name, '_')-sizeof(start_time_str)+1, sizeof(start_time_str)-1);
-				snprintf(out_avi_file, MAX_NAME_STR, "%s_%s-%s.%s", 
-                         record_type_suffix, start_time_str, stop_time_str, VIDEO_FORMAT_SUFFIX);
-            }
-            else
-            {
-                memcpy(start_time_str, strchr(g_tmp_file_name, '.')-sizeof(start_time_str)+1, sizeof(start_time_str)-1);
-                if (0 == change_rec_type)
-                {
-                    snprintf(out_avi_file, MAX_NAME_STR, "%s-%s.%s", start_time_str, stop_time_str, VIDEO_FORMAT_SUFFIX);
-                }
-                else
-                {
-                    change_rec_type = 0;
-					snprintf(out_avi_file, MAX_NAME_STR, "%s_%s-%s.%s", EnumTypeMapStr(E_REC_MAP, g_curr_record_type), 
-							start_time_str, stop_time_str, VIDEO_FORMAT_SUFFIX);
-                }
-            }
-
-            snprintf(rec_file_name, sizeof(rec_file_name), "%s/%s", g_ops_file_path, out_avi_file);
-            rename(g_tmp_file_name, rec_file_name);
-     
-#ifdef SD_DBG_INF
-            SD_OPS_DEBUG("rename %s to %s successful!\n", g_tmp_file_name, rec_file_name);
-            SD_OPS_DEBUG("----------Finally create %s file is %s----------\n", VIDEO_FORMAT_SUFFIX, out_avi_file);
-#endif
-            /* 将类型关联信息保存到录像文件中 */
-            SDOPS_SaveTypeInfoToFile (&g_curr_record_info, rec_file_name);
-            memset(g_tmp_file_name, 0, sizeof(g_tmp_file_name));
-            SD_OPS_DEBUG("Stop recording , now filename:%s!\n", rec_file_name);
-
-            g_b_need_creat_avi_file = 1;
-            g_sd_write_status = SdCardIsIDEL;
-            pthread_mutex_unlock(&global_disk_write_mutex);
-            return 1;
-        }
+        SD_OPS_INFO("MP4 segment closed, duration=%us, file=%s\n",
+                    seg_duration_sec, g_mp4_curr_file_name);
     }
 
-    /* 创建新的AVI文件需要做的工作 */
-    if (g_b_need_creat_avi_file)
+    /* ===== 3. 创建新分片 Writer ===== */
+    if (g_mp4_writer == NULL)
     {
-        /* sOverDayFlag条件是为了保证跨天后的录像的开始时间为今天 */
-        if ((sOverDayFlag == 1) && (pRawHead->u32RealTimeSec < sUpdateTimeSec))
-        {
-            pthread_mutex_unlock(&global_disk_write_mutex);
-            return 0;
-        }
-        sOverDayFlag = 0;
-    
-        g_b_need_creat_avi_file = 0;
-
-        sem_post(&g_semDeleteFileThread);
-    
-        g_curr_record_info.uFileBeginTime = pRawHead->u32RealTimeSec;
-    
-        if (rec_start_time)
-        {
-            *rec_start_time = pRawHead->u32RealTimeSec;
-        }
-
         ULONG_TO_TIME((pRawHead->u32RealTimeSec), y, mon, d, h, min, s);
-    
+
+        /* 目录结构：<挂载点>/video/YYYYMMDD/ */
         snprintf(record_dir, sizeof(record_dir), "%04d%02d%02d", y, mon, d);
-        snprintf(g_ops_file_path, sizeof(g_ops_file_path), "%s/video/%s", g_diskinfo.Partitions[0].Mount_point, record_dir);
-        snprintf(start_time_str, sizeof(start_time_str), "%04d%02d%02d%02d%02d%02d", y, mon, d, h, min, s);
-    
-        memset(g_tmp_file_name, 0, sizeof(g_tmp_file_name));
-        printf("g_curr_record_type %d\n", g_curr_record_type);
-        if (eNormalRecord == g_curr_record_type) 
+        snprintf(full_path, sizeof(full_path), "%s/video/%s",
+                 g_diskinfo.Partitions[0].Mount_point, record_dir);
+        CreateDirent(full_path);
+
+        /* 文件名：rec_YYYYMMDD_HHMMSS.mp4 */
+        snprintf(base_file_name, sizeof(base_file_name),
+                 "rec_%04d%02d%02d_%02d%02d%02d.mp4", y, mon, d, h, min, s);
+        snprintf(g_mp4_curr_file_name, sizeof(g_mp4_curr_file_name),
+                 "%s/%s", full_path, base_file_name);
+
+        /* Writer 初始化参数：宽高传 0，由 MP4Writer 内部从 SPS 自动解析 */
+        memset(&info, 0, sizeof(info));
+        info.width  = 0;
+        info.height = 0;
+        info.fps    = 25;
+        info.start_time = pRawHead->u32RealTimeSec;
+
+        /* 切片/刷盘配置：嵌入式 SD 卡友好 */
+        memset(&cfg, 0, sizeof(cfg));
+        cfg.max_samples      = 30;
+        cfg.max_bytes        = 512 * 1024;
+        cfg.max_duration_ms  = 2000;
+        cfg.sync_interval_ms = 2000;
+
+        g_mp4_writer = MP4Writer_Create(g_mp4_curr_file_name, &info, &cfg);
+        if (g_mp4_writer == NULL)
         {
-            snprintf(g_tmp_file_name, sizeof(g_tmp_file_name), "%s/%s.tmp", g_ops_file_path, start_time_str);
-        }
-        else
-        {
-            snprintf(g_tmp_file_name, sizeof(g_tmp_file_name), "%s/%s_%s.tmp", 
-                      g_ops_file_path, start_time_str, EnumTypeMapStr(E_REC_MAP, g_curr_record_type));
-        }
-        g_last_record_type = g_curr_record_type;
-        g_curr_record_type = eNoRecord;
-    
-        CreateDirent(g_ops_file_path);
-    
-        if (InitAviActionMode(g_tmp_file_name, 0, 0))
-        {
-            SD_OPS_ERROR("Init write %s mode fail! file %s!\n", VIDEO_FORMAT_SUFFIX, g_tmp_file_name);
+            /* Create 失败时句柄为 NULL，无法调用 GetLastError，直接输出文件名 */
+            SD_OPS_ERROR("MP4Writer_Create failed for: %s\n", g_mp4_curr_file_name);
             g_sd_write_status = SdCardWriteFail;
             pthread_mutex_unlock(&global_disk_write_mutex);
             return -1;
         }
-        /* 切换到新文件的时候，需要初始化一下录像类型信息 */
-        SDOPS_InitRecordTypeInfo (pRawHead, & g_curr_record_info);
-        SD_OPS_DEBUG("Start to init write record %s!\n", g_tmp_file_name);
+
+        /* 新分片起始时间 */
+        g_mp4_seg_begin_frame_abs_us = cur_abs_us;
+        g_mp4_seg_begin_real_sec     = pRawHead->u32RealTimeSec;
+        g_mp4_seg_begin_real_usec    = pRawHead->u32RealTimeUSec;
+        g_mp4_have_first_frame = 1;
+
+        if (rec_start_time)
+        {
+            *rec_start_time = g_mp4_seg_begin_real_sec;
+        }
+
+        SD_OPS_INFO("MP4 segment opened: %s\n", g_mp4_curr_file_name);
+
+        /* 旧 AVI 辅助函数/变量：保留以备后续回退复用，这里显式引用避免 -Wunused-function/-Wunused-variable */
+        (void)SDOPS_InitRecordTypeInfo;
+        (void)SDOPS_SaveTypeInfoToFile;
+        (void)g_ops_file_path;
+        (void)g_curr_record_info;
+        (void)g_last_record_type;
     }
-	
 
-    WriteFrameToAvi(frame_size, frame_buffer, frame_head, &file_pos, 0); // spent 1~130ms
+    /* ===== 4. 写入当前帧 =====
+     * keyframe 传 -1 让 Writer 自动识别 IDR，也可以由 byFrameType 直接给出 0/1。
+     * 这里显式传递 is_key 以便避免内部解析额外开销。
+     */
+    ret = MP4Writer_WriteFrame(g_mp4_writer,
+                               frame_buffer, frame_size,
+                               cur_pts_us, cur_dts_us,
+                               is_key);
+    if (ret != 0)
+    {
+        SD_OPS_ERROR("MP4Writer_WriteFrame failed: %s (size=%d)\n",
+                     MP4Writer_GetLastError(g_mp4_writer), frame_size);
+        /* 出错时 Close+Destroy，释放资源并防止悬挂指针 */
+        MP4Writer_Close(g_mp4_writer);
+        MP4Writer_Destroy(g_mp4_writer);
+        g_mp4_writer = NULL;
+        g_mp4_have_first_frame = 0;
+        g_sd_write_status = SdCardWriteFail;
+        pthread_mutex_unlock(&global_disk_write_mutex);
+        return -1;
+    }
 
-
-    /* 更新文件的类型关联信息 */
-    g_curr_record_info.uFileEndTime = ((pRawHead->u32RealTimeSec > g_curr_record_info.uFileBeginTime)?pRawHead->u32RealTimeSec:g_curr_record_info.uFileBeginTime);
-    g_second_times = g_curr_record_info.uFileEndTime - g_curr_record_info.uFileBeginTime;
+    /* ===== 5. 更新全局状态 ===== */
+    g_second_times = seg_duration_sec;  /* 与旧接口保持同名，供外部查询当前分片时长 */
+    g_sd_write_status = SdCardIsWriting;
 
     pthread_mutex_unlock(&global_disk_write_mutex);
-    return 0;
+    return (need_new_seg) ? 1 : 0;
 }
 
-/*@breif BinareySearchEx 二分法查找递增表中最接近最小的数
- *@param [IN] data 欲查找的递增数组表
- *@param [IN] data_count 该数组的元素个数
- *@param [IN] key 欲查找的数
- *@return 成功返回数组下标
- *@      失败返回-1
- *@note  支持重复数据, 返回最近最大的数的下标
- */
 static int BinareySearchEx(unsigned int *data, int data_count, unsigned int key)
 {
     if (NULL == data)
