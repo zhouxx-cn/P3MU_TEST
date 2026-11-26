@@ -341,168 +341,12 @@ extern int DestroyOnePopHandle(int handle);
 /* 释放一个弹出句柄 */
 extern void FreeOnePopHandle(int handle);
 
-/*@breif WriteDataToSdCard 将从RingBuffer里面获取到一帧数据的写成AVI数据(写入SD卡)
- *@param [IN]  frame_size 一帧数据的大小
- *@param [IN]  frame_buffer 帧数据(无信息头的纯净264数据)
- *@param [IN]  frame_head 帧头信息
- *@param [IN]  need_update_file 是否需要马上更新文件(换文件)，一般用在时间发生突变的情况下
- *@param [OUT] avi_file_write_over 当前的AVI文件是否已经写完毕(以文件为单位)
- *@param [OUT] out_avi_file 写文件结束之后生成的文件名(avi_file_write_over=1有效)
- *@return 成功返回0
- *@      失败返回-1
- */
-extern int WriteDataToSdCard(int frame_size,                            /* 一帧数据的大小 */
-                                   unsigned char * frame_buffer,        /* 纯264数据buffer */
-                                   unsigned char *frame_head,           /* 帧头buffer */
-                                   unsigned int *need_update_file,      /* 是否需要马上更新文件 */
-                                   unsigned int *avi_file_write_over, /* 当前的AVI文件是否已经写完毕 */
-                                   unsigned char *out_avi_file,         /* 写文件结束之后生成的文件名 */
-                                   unsigned int *rec_start_time);         /* 录像的开始时间 */
-
-/*@breif UploadPictureToSdCard 导入一个图片到SD卡里面(写入SD卡)
- *@param [IN] pic_name 图片的名字(图片名字组成: 时间戳_标号)
- *@param [IN] trig_type 触发类型
- *@return 成功返回0
- *@      失败返回-1
- *@note   1. 传入的图片名字组成: 时间戳_标号，如:1532477851_01需要改为1532477851;
- *@       2. 图片的个数上限为MAX_PIC_NUM个，可以修改;
- *@       2. 当图片个数到达上限，则采用删除最旧的文件的方式进行循环删除;
- *@       3. 在图片从内存拷贝到SD卡的过程中，采用64字节对齐的copy方式，提高写效率;
- *@       4. 在循环覆盖的时候，需要及时更新图片全局结构体索引，类似于AVI录像
- */
-extern int UploadPictureToSdCard(const char *pic_name, unsigned int trig_type);
-
-/*@breif GetIFrameListFromAviFile 从avi文件里面获取I帧信息表放在句柄里面
- *@param [IN]  avi_file 欲操作的AVI文件
- *@param [OUT] i_frame_handle 从avi_file里面获取到的I帧信息句柄
- *@param [OUT] effect_count 句柄里面有效的结构体个数
- *@return 成功返回0
- *@      失败返回-1
- */
-extern int GetIFrameListFromAviFile(const unsigned char *avi_file, IFrameInfo *i_frame_handle, int *effect_count);
-
-/*@breif GetTimeSegmentArray 从给定的时间段里面获取符合该时间段的avi文件列表
- *@param [IN]  start_time 欲查找的开始时间戳
- *@param [IN]  stop_time  欲查找的结束时间戳
- *@param [OUT] file_list  获取到的文件指针数组
- *@param [OUT] avi_count  获取到的AVI文件个数
- *@param [OUT] seek_seg_start_index 当前seek片段的avi_file_set的起始下标
- *@param [OUT] seek_seg_stop_index  当前seek片段的avi_file_set的结束下标
- *@return 成功返回0
- *@       失败返回-1
- *@note   查询的时间段不能超过一天即24小时
- *        暂未用到
- */
-extern int GetTimeSegmentArray(unsigned int start_time, 
-                                         unsigned int stop_time, 
-                                         void **file_list, 
-                                         int *avi_file_count,
-                                         int *seek_seg_start_index,
-                                         int *seek_seg_stop_index);
-
-/*@breif ReadAviSegLinkByTime 从给定的时间段里面获取符合该时间段的avi文件链表
- *@param [IN]  pop_handle_inx 当前查找的handle索引
- *@param [IN]  start_time 欲查找的开始时间戳
- *@param [IN]  stop_time  欲查找的结束时间戳
- *@param [IN]  record_type  欲查找的文件类型
- *@param [OUT] plink  获取到的链表头指针
- *@return 成功返回文件个数
- *@       失败返回-1
- *@note   查询的时间段不能超过一天即24小时
- */
-extern int ReadAviSegLinkByTime(int pop_handle_inx, 
-                                           time_t start_time, 
-                                           time_t stop_time, 
-                                           int record_type, 
-                                           AviSegLinkList **plink);
-
-/*@breif SearchRecordByTime 查询某一天是否有录像文件
- *@param [IN]  iYear 欲查找的开始时间——年
- *@param [IN]  iMonth 欲查找的开始时间——月
- *@param [IN]  iDay 欲查找的开始时间——日
- *@param [OUT] ifExist 是否有AVI文件
- *@return 成功返回 0
- *@       失败返回-1
- */
-extern int SearchRecordByTime(int iYear, int iMonth, int iDay, int *ifExist);
-
-/*@breif SeekTimePointFromRecFileList 从给出的文件链表结构体里面获取对应的录像文件信息
- *@param [IN] pop_index 当前回放的序号
- *@param [IN] seek_time 欲查找的开始时间戳
- *@param [OUT] get_file_info 获取到的录像文件信息
- *@param [OUT] curr_rec_index 获取到当前操作的录像文件的索引
- *@return 成功返回0
- *@       失败返回-1
- */
-extern int SeekTimePointFromRecFileList(int pop_index, 
-                                                       unsigned int seek_time, 
-                                                       void *get_file_info, 
-                                                       int *curr_rec_index);
-
-int SeekTimePointFromAviFileList(int pop_index, 
-                                                unsigned int seek_time, 
-                                                void *get_file_info, 
-                                                int *curr_rec_index,
-                                                void *iframe_info,
-                                                void *iframe_info_pre);
-
-/*@breif SeekTimePointFromGlobalIndexFile 从全局索引文件里面获取对应的AVI文件进而获取对应的I帧帧号
- *@param [IN] pop_index 定位的序号
- *@param [IN] seek_time 欲查找的开始时间戳
- *@param [OUT] get_avi_name 获取到的AVI文件
- *@param [OUT] get_iframe_num 获取到的I帧对应的视频帧的帧号
- *@param [OUT] get_real_time  获取到的I帧对应的视频帧的绝对时间戳 
- *@param [OUT] get_show_time  获取到的I帧对应的视频帧的相对时间戳
- *@return 成功返回0
- *@       失败返回-1
- *@note   备用
- */
-extern int SeekTimePointFromGlobalIndexFile(int pop_index, 
-                                                             unsigned int seek_time, 
-                                                             unsigned char *get_avi_name, 
-                                                             unsigned int *get_iframe_num, 
-                                                             unsigned int *get_real_time, 
-                                                             unsigned int *get_show_time);
-
 extern void printsegtime(int FrameTime);
 
-/*@breif pop_one_frame_from_sector 回放抛出一帧数据给上层
- *@param [IN] PoPhandle Pop句柄
- *@param [IN] rec_type 欲查找的弹出类型(暂不支持)
- *@param [OUT] p_frame_buffer 获取到的帧缓冲
- *@param [OUT] pSize 获取到的帧的大小
- *@param [OUT] pFrametype 获取到的帧的类型
- *@param [OUT] pKeyframe 获取到的帧是否为关键帧
- *@param [OUT] pRealTimeSec 获取到的帧的绝对时间戳(秒)
- *@param [OUT] pRealTimeUSec 获取到的帧的绝对时间戳(微秒)
- *@param [IN] pNeedSeek 是否需要seek定位(首次和双击需要进行seek定位)
- *@return 返回0表示成功抛出一帧数据
- *@       返回-1表示抛出错误
- *@       返回1表示文件抛出结束
- *@       返回2表示文件不存在，跳过该文件(注意，此时p_frame_buffer为空，不可触发回调)
- */
-extern int pop_one_frame_from_sector(PopHandle *PoPhandle, 
-                                          int rec_type, 
-                                          char **p_frame_buffer, 
-                                          int *pSize, 
-                                          int *pFrametype, 
-                                          int *pKeyframe, 
-                                          unsigned int *pRealTimeSec, 
-                                          unsigned int *pRealTimeUSec,
-                                          int *pNeedSeek,
-                                          int *VipFraame);
+int CreateDirent(const char *sPathName);
 
 /* 获取磁盘资源占用情况(单位: MB) */
 extern int GetDiskResourceSize(int *pRecordMB, int *pPictureMB);
-
-/* 获取录像和图片存放的比例(范围0~100) */
-extern int GetVideoUsedSpaceRate(void);
-
-/* 设置录像和图片存放的比例(范围0~100) */
-extern int SetVideoUsedSpaceRate(int nVideoSpace);
-
-/* 设置录像尺寸 */
-extern int SetRecordSize(int width, int height, int bH265);
 
 /* 格式化SD卡(返回值: -1:失败; 0:成功 1:没有SD卡) */
 extern int FormatSdCard(void);
@@ -515,12 +359,6 @@ extern int GetSdCardWriteStatus(void);
 
 /* 获取SD卡相关信息 */
 extern int GetSdCardInfo(LPSdCardStatus pSdCardStatus);
-
-/* 设置当前录像的类型 */
-extern void SetSdRecordType(int nRecordType);
-
-/* 获取当前录像类型 */
-extern int GetSdRecordType(void);
 
 /*@breif GetFileReadWriteStatus 获取当前文件的读写状态
  *@param [IN]  file_name 需要操作的文件名(绝对路径)
@@ -536,14 +374,6 @@ extern int GetFileReadWriteStatus(const char *file_name,
                                          unsigned int *read_write_status,
                                          unsigned int *file_size);
 
-/* 设置获取时间偏移回调 */
-extern int SetGetTimeOffsetCallBack(int (*CallBack)(int*, int *, int *));
-
-/* 设置录像延迟时间，获取之后再查一下 */
-int SDOPS_SetRecordDelayTime (unsigned int nDelaySecs);
-
-/* 获取录像延迟时间 */
-int SDOPS_GetRecordDelayTime (unsigned int *pnDelaySecs);
 
 /*@breif SDOPS_GetRecordDataSize 获取指定时间段的录像数据大小
  *@param [IN] start_time 开始时间
