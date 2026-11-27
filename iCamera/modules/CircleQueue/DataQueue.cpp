@@ -38,6 +38,32 @@
 #endif
 
 namespace xrs_circle_queue {
+
+//!\brief 判断帧类型是否为I帧（视频关键帧）
+static bool IsIFrameType(int32_t s32FrameType)
+{
+    switch (s32FrameType)
+    {
+    case PktIFrames:
+    case PktQCIFIFrames:
+    case PktSQCIFIFrames:
+    case PktFourthIFrames:
+    case PktCaptureIFrames:
+    case PktIFramesForS1:
+    case PktQCIFIFramesForS1:
+    case PktFourthIFramesForS1:
+    case PktIFramesForS2:
+    case PktQCIFIFramesForS2:
+    case PktFourthIFramesForS2:
+    case PktIFramesForS3:
+    case PktQCIFIFramesForS3:
+    case PktFourthIFramesForS3:
+        return true;
+    default:
+        return false;
+    }
+}
+
 DataNode::DataNode(DataQueue *ptrQueue, CQ_DATA_S &stData, bool bCopy):
     s32Channel(stData.s32Channel), s32Stream(stData.s32Stream), s32FrameType(stData.s32FrameType),
     pData(stData.pData),s32DataSize(stData.s32DataSize),
@@ -106,6 +132,17 @@ DataQueue::DataQueue(int s32Size, int s32Duration, bool bCopyMode):
 
 DataQueue::~DataQueue()
 {
+    // 释放队列中残留的节点内存
+    for (auto it = m_listQueue.begin(); it != m_listQueue.end(); it++)
+    {
+        it->FreeMem();
+    }
+    m_listQueue.clear();
+    for (auto it = m_listExpired.begin(); it != m_listExpired.end(); it++)
+    {
+        it->FreeMem();
+    }
+    m_listExpired.clear();
 }
 
 int32_t DataQueue::AddNode(CQ_DATA_S &stData)
@@ -136,26 +173,7 @@ int32_t DataQueue::AddNode(CQ_DATA_S &stData)
     m_objStats.m_s32TotalAddNodes++;
     m_objStats.m_s32TotalNodeSize += stData.s32DataSize;
     m_objStats.m_s32UsedSpace += stData.s32DataSize;
-	if (PktIFrames == stData.s32FrameType || PktPFrames == stData.s32FrameType)
-	{
-		m_objStats.m_s32FrameCount[MAIN_STREAM]++;
-	}
-	else if (PktQCIFIFrames == stData.s32FrameType || PktQCIFPFrames == stData.s32FrameType)
-	{
-		m_objStats.m_s32FrameCount[SUB_STREAM]++;
-	}
-	else if (PktSQCIFIFrames == stData.s32FrameType || PktSQCIFPFrames == stData.s32FrameType)
-	{
-		m_objStats.m_s32FrameCount[THIRD_STREAM]++;
-	}
-	else if (PktFourthIFrames == stData.s32FrameType || PktFourthPFrames == stData.s32FrameType)
-	{
-		m_objStats.m_s32FrameCount[CAPTURE_STREAM]++;
-	}
-	else if (PktAudioFrames == stData.s32FrameType)
-	{
-		m_objStats.m_s32FrameCount[AUDIO_STREAM]++;
-	}
+	UpdateFrameCount(stData.s32FrameType, 1);
 
     CQ_DEBUG("m_objStats:\n");
 	#if 0
@@ -210,8 +228,25 @@ int32_t DataQueue::GetNextNode(User *pUser, CQ_DATA_S &refData)
         return XRS_CQ_ERR_EMPTY;
     }
     DataQueue::NodeList::iterator itNode;
+    bool bFirstRead = (pUser->Seq() < 0);
+    // 强制拉取最新节点（MJPEG场景）
+    if (pUser->GetNewNodeFlag() == 1)
+    {
+        itNode = m_listQueue.end();
+        itNode--;
+    }
+    // 第一次获取节点，按消费者指定的起始策略定位起始节点（录像/预录制）
+    else if (bFirstRead && (CQ_START_NEWEST != pUser->GetStartPolicy()))
+    {
+        if (!FindStartNode(pUser, itNode))
+        {
+            CQ_ERR("Queue %p User %p find start idr failed, policy=%d\n",
+                this, pUser, pUser->GetStartPolicy());
+            return XRS_CQ_ERR_NO_IDR;
+        }
+    }
     // 第一次获取节点,则直接读最后一个节点（最新的数据）
-    if (pUser->Seq() < 0 || pUser->GetNewNodeFlag() == 1)
+    else if (bFirstRead)
     {
         itNode = m_listQueue.end();
         itNode--;
@@ -255,18 +290,94 @@ int32_t DataQueue::GetNextNode(User *pUser, CQ_DATA_S &refData)
 int32_t DataQueue::GetNode(User *pUser, CQ_DATA_S &refData)
 {
     int32_t s32Ret = 0;
-    bool bCheckChannel = (0xff != pUser->Param().s32Channel);
-    bool bCheckStream = (0xff != pUser->Param().s32Stream);
     while (0 == (s32Ret = GetNextNode(pUser, refData)))
     {
-        if (((!bCheckChannel) || (refData.s32Channel == pUser->Param().s32Channel)) &&
-            ((!bCheckStream) || (refData.s32Stream == pUser->Param().s32Stream)))
+        if (MatchUser(pUser, refData.s32Channel, refData.s32Stream))
         {
             return XRS_CQ_OK;
         }
         ReleaseNode(pUser);
     }
     return s32Ret;
+}
+
+//!\brief 判断通道/码流是否匹配消费者的过滤条件
+bool DataQueue::MatchUser(User *pUser, int32_t s32Channel, int32_t s32Stream)
+{
+    bool bCheckChannel = (0xff != pUser->Param().s32Channel);
+    bool bCheckStream = (0xff != pUser->Param().s32Stream);
+    if (bCheckChannel && (s32Channel != pUser->Param().s32Channel))
+    {
+        return false;
+    }
+    if (bCheckStream && (s32Stream != pUser->Param().s32Stream))
+    {
+        return false;
+    }
+    return true;
+}
+
+//!\brief 按消费者的起始策略定位起始节点
+bool DataQueue::FindStartNode(User *pUser, DataQueue::NodeList::iterator &itNode)
+{
+    if (m_listQueue.empty())
+    {
+        return false;
+    }
+
+    if (CQ_START_IDR_BEFORE_OFFSET == pUser->GetStartPolicy())
+    {
+        // 预录制：取[当前时刻 - 预录时长]之前的最近一个I帧
+        std::chrono::steady_clock::time_point tpTarget = std::chrono::steady_clock::now() -
+            std::chrono::milliseconds(pUser->GetStartOffsetMs());
+        DataQueue::NodeList::iterator itOldestIdr = m_listQueue.end();
+        DataQueue::NodeList::iterator itHitIdr = m_listQueue.end();
+        for (auto it = m_listQueue.begin(); it != m_listQueue.end(); ++it)
+        {
+            if (!IsIFrameType(it->GetFrameType()) || !MatchUser(pUser, it->GetChannel(), it->GetStream()))
+            {
+                continue;
+            }
+            if (itOldestIdr == m_listQueue.end())
+            {
+                itOldestIdr = it;
+            }
+            if (it->Time() <= tpTarget)
+            {
+                itHitIdr = it;
+            }
+        }
+        if (itHitIdr != m_listQueue.end())
+        {
+            itNode = itHitIdr;
+            return true;
+        }
+        // 预录时长超出缓冲范围，回退到缓冲区内最老的I帧（尽力而为）
+        if (itOldestIdr != m_listQueue.end())
+        {
+            CQ_INFO("Queue %p User %p start offset %d ms exceeds buffer range, fallback to oldest idr\n",
+                this, pUser, pUser->GetStartOffsetMs());
+            itNode = itOldestIdr;
+            return true;
+        }
+        return false;
+    }
+
+    // CQ_START_LATEST_IDR：取缓冲区内最近的一个I帧
+    DataQueue::NodeList::iterator itLatestIdr = m_listQueue.end();
+    for (auto it = m_listQueue.begin(); it != m_listQueue.end(); ++it)
+    {
+        if (IsIFrameType(it->GetFrameType()) && MatchUser(pUser, it->GetChannel(), it->GetStream()))
+        {
+            itLatestIdr = it;
+        }
+    }
+    if (itLatestIdr == m_listQueue.end())
+    {
+        return false;
+    }
+    itNode = itLatestIdr;
+    return true;
 }
 
 int32_t DataQueue::ReleaseNode(User *pUser)
@@ -293,30 +404,12 @@ int32_t DataQueue::ReleaseNode(User *pUser)
         if (!itFind->IsBusy())
         {
             CQ_DEBUG("Queue %p User %p free expired node %d size %d !\n", this, pUser, itFind->Seq(), itFind->Size());
+            int32_t s32FrameType = itFind->GetFrameType();
             itFind->FreeMem();
             m_objStats.m_s32UsedSpace -= itFind->Size();
             m_listExpired.erase(itFind);
 			m_objStats.m_s32TotalAddNodes--;
-			if (PktIFrames == itFind->GetFrameType() || PktPFrames == itFind->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[MAIN_STREAM]--;
-			}
-			else if (PktQCIFIFrames == itFind->GetFrameType() || PktQCIFPFrames == itFind->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[SUB_STREAM]--;
-			}
-			else if (PktSQCIFIFrames == itFind->GetFrameType() || PktSQCIFPFrames == itFind->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[THIRD_STREAM]--;
-			}
-			else if (PktFourthIFrames == itFind->GetFrameType() || PktFourthPFrames == itFind->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[CAPTURE_STREAM]--;
-			}
-			else if (PktAudioFrames == itFind->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[AUDIO_STREAM]--;
-			}
+			UpdateFrameCount(s32FrameType, -1);
         }
     }
     CQ_DEBUG("Queue %p User %p release node %d\n", this, pUser, pUser->Seq());
@@ -365,26 +458,7 @@ int DataQueue::RequestSpace(int32_t s32Size)
             CQ_DEBUG("Queue %p free node %d size %d !!\n", this, itNode->Seq(), itNode->Size());
             m_objStats.m_s32UsedSpace -= itNode->Size();
 			m_objStats.m_s32TotalAddNodes--;
-			if (PktIFrames == itNode->GetFrameType() || PktPFrames == itNode->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[MAIN_STREAM]--;
-			}
-			else if (PktQCIFIFrames == itNode->GetFrameType() || PktQCIFPFrames == itNode->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[SUB_STREAM]--;
-			}
-			else if (PktSQCIFIFrames == itNode->GetFrameType() || PktSQCIFPFrames == itNode->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[THIRD_STREAM]--;
-			}
-			else if (PktFourthIFrames == itNode->GetFrameType() || PktFourthPFrames == itNode->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[CAPTURE_STREAM]--;
-			}
-			else if (PktAudioFrames == itNode->GetFrameType())
-			{
-				m_objStats.m_s32FrameCount[AUDIO_STREAM]--;
-			}
+			UpdateFrameCount(itNode->GetFrameType(), -1);
         }
         // 头节点从队列中删除
         m_listQueue.erase(itNode);
@@ -481,6 +555,121 @@ int32_t DataQueue::DeleteUser(void)
         it = m_vecUser.erase(it);
     }
 
+    return XRS_CQ_OK;
+}
+
+//!\brief 更新各码流的帧计数统计
+void DataQueue::UpdateFrameCount(int32_t s32FrameType, int32_t s32Delta)
+{
+    if (PktIFrames == s32FrameType || PktPFrames == s32FrameType)
+    {
+        m_objStats.m_s32FrameCount[MAIN_STREAM] += s32Delta;
+    }
+    else if (PktQCIFIFrames == s32FrameType || PktQCIFPFrames == s32FrameType)
+    {
+        m_objStats.m_s32FrameCount[SUB_STREAM] += s32Delta;
+    }
+    else if (PktSQCIFIFrames == s32FrameType || PktSQCIFPFrames == s32FrameType)
+    {
+        m_objStats.m_s32FrameCount[THIRD_STREAM] += s32Delta;
+    }
+    else if (PktFourthIFrames == s32FrameType || PktFourthPFrames == s32FrameType)
+    {
+        m_objStats.m_s32FrameCount[CAPTURE_STREAM] += s32Delta;
+    }
+    else if (PktAudioFrames == s32FrameType)
+    {
+        m_objStats.m_s32FrameCount[AUDIO_STREAM] += s32Delta;
+    }
+}
+
+//!\brief 清空缓冲区
+//  未被占用的节点移入 listFree，由调用者在锁外释放内存；仍被占用的节点移入超时队列，
+//  待消费者释放后再回收内存。
+//  节点序号不重置，保证老消费者在缓冲区重新有数据后能无缝切换到新数据。
+int32_t DataQueue::Clear(NodeList &listFree)
+{
+    while (!m_listQueue.empty())
+    {
+        auto itNode = m_listQueue.begin();
+        if (itNode->IsBusy())
+        {
+            // 仍被消费者占用，移入超时队列，等待消费者释放后再回收
+            m_listExpired.splice(m_listExpired.end(), m_listQueue, itNode);
+        }
+        else
+        {
+            // 无人占用，移出待释放列表，由调用者在锁外释放内存
+            m_objStats.m_s32UsedSpace -= itNode->Size();
+            m_objStats.m_s32TotalAddNodes--;
+            UpdateFrameCount(itNode->GetFrameType(), -1);
+            listFree.splice(listFree.end(), m_listQueue, itNode);
+        }
+    }
+
+    // 序号不重置，仅同步统计信息
+    m_objStats.m_s32SeqHead = m_objStats.m_s32SeqTail + 1;
+    m_objStats.m_timeHead = std::chrono::steady_clock::now();
+    m_objStats.m_timeTail = m_objStats.m_timeHead;
+
+    // 释放消费者当前占用的节点，并修正其读取进度
+    // 已读序号不重置，缓冲区重新有数据后，老消费者会自动切换到新数据流
+    for (auto it = m_vecUser.begin(); it != m_vecUser.end(); it++)
+    {
+        User *pUser = *it;
+        if (pUser->IsBusy())
+        {
+            ReleaseNode(pUser);
+        }
+        // 节点已移出队列，原进度迭代器已失效，指向队尾
+        pUser->SetProgress(m_listQueue.end());
+    }
+
+    CQ_INFO("Queue %p clear, expired node count %d\n", this, (int32_t)m_listExpired.size());
+    return XRS_CQ_OK;
+}
+
+//!\brief 强制释放消费者当前占用的节点，并重置其读取进度
+int32_t DataQueue::FlushUser(User *pUser)
+{
+    if (nullptr == pUser)
+    {
+        return XRS_CQ_ERR_INVALID_USER;
+    }
+    if (pUser->IsBusy())
+    {
+        ReleaseNode(pUser);
+    }
+    // 重置进度，下次取流按起始策略重新定位
+    pUser->Reset();
+    return XRS_CQ_OK;
+}
+
+//!\brief 查询缓冲区状态
+int32_t DataQueue::GetStatus(CQ_STATUS_S &refStatus)
+{
+    refStatus.s32UsedSpace = m_objStats.m_s32UsedSpace;
+    refStatus.s32TotalSpace = m_s32TotalSpace;
+    refStatus.s32NodeCount = (int32_t)m_listQueue.size();
+    refStatus.s32BufferedMs = 0;
+    refStatus.s32HasIdr = 0;
+
+    if (!m_listQueue.empty())
+    {
+        auto itHead = m_listQueue.begin();
+        auto itTail = m_listQueue.end();
+        itTail--;
+        refStatus.s32BufferedMs = (int32_t)std::chrono::duration_cast<std::chrono::milliseconds>(
+            itTail->Time() - itHead->Time()).count();
+        for (auto it = m_listQueue.begin(); it != m_listQueue.end(); it++)
+        {
+            if (IsIFrameType(it->GetFrameType()))
+            {
+                refStatus.s32HasIdr = 1;
+                break;
+            }
+        }
+    }
     return XRS_CQ_OK;
 }
 

@@ -120,6 +120,8 @@ public:
     int32_t Size() const { return s32DataSize; };
     int32_t Seq() const { return s32Seq; };
 	int32_t GetFrameType() const { return s32FrameType; };
+    int32_t GetChannel() const { return s32Channel; };
+    int32_t GetStream() const { return s32Stream; };
     std::chrono::steady_clock::time_point Time() const { return tpSteady; };
     int Check(CQ_USER_PARAM_S &refParam) 
     { 
@@ -154,6 +156,14 @@ public:
     User *AddUser(void);
     int32_t DeleteUser(User *pUser);
     int32_t DeleteUser(void);
+    //!\brief 清空缓冲区，未被占用的节点移入 listFree 待释放，被占用的节点延迟释放
+    int32_t Clear(NodeList &listFree);
+    //!\brief 重置消费者读取进度，并释放其当前占用的节点
+    int32_t FlushUser(User *pUser);
+    //!\brief 查询缓冲区状态
+    int32_t GetStatus(CQ_STATUS_S &refStatus);
+    //!\brief 队列尾迭代器，用于重置消费者进度
+    NodeList::iterator EndNode() { return m_listQueue.end(); };
     void lock() {m_mtxLock.lock();};
     void unlock() {m_mtxLock.unlock();};
 
@@ -162,6 +172,12 @@ private:
     DataQueue::NodeList::iterator FindNode(int32_t s32Seq, const NodeList::iterator& itNode);
     bool IsExpired(int32_t s32Seq);
     int32_t GetNextNode(User *pUser, CQ_DATA_S &refData);
+    //!\brief 按消费者的起始策略定位起始节点
+    bool FindStartNode(User *pUser, DataQueue::NodeList::iterator &itNode);
+    //!\brief 节点是否匹配消费者的通道/码流过滤条件
+    bool MatchUser(User *pUser, int32_t s32Channel, int32_t s32Stream);
+    //!\brief 更新各码流帧计数统计
+    void UpdateFrameCount(int32_t s32FrameType, int32_t s32Delta);
 
 private:
     int32_t  m_s32TotalSpace;

@@ -38,6 +38,10 @@ CQ_USER CircleQueue_AddUser(CQ_HANDLE hCircleQueue, CQ_USER_PARAM_S *pstUserPara
     {
         return XRS_CQ_ERR_INVALID_HANDLE;
     }
+    if (nullptr == pstUserParam)
+    {
+        return 0;
+    }
 
     DataQueue *pQueue = reinterpret_cast<DataQueue *>(hCircleQueue);
     User *pUser =  pQueue->AddUser();
@@ -47,22 +51,42 @@ CQ_USER CircleQueue_AddUser(CQ_HANDLE hCircleQueue, CQ_USER_PARAM_S *pstUserPara
     }
     pUser->Param() = *pstUserParam;
 	//判断当新添加用户句柄 流类型为MJPEG时，修改标志，后续每次通过此句柄获取流数据时，强制获取最新的流数据
-	if(pstUserParam != NULL)
-	{	
-		if(pstUserParam->s32Stream == 3)
-		{
-			pUser->SetNewNodeFlag(1);
-		}
-		else
-		{
-			pUser->SetNewNodeFlag(0);
-		}
+	if(pstUserParam->s32Stream == 3)
+	{
+		pUser->SetNewNodeFlag(1);
 	}
 	else
 	{
 		pUser->SetNewNodeFlag(0);
 	}
-	
+
+    return reinterpret_cast<CQ_USER>(pUser);
+}
+
+//!\brief添加消费者（扩展接口，支持指定首次取流的起始策略）
+CQ_USER CircleQueue_AddUserEx(CQ_HANDLE hCircleQueue, CQ_USER_PARAM_EX_S *pstUserParam)
+{
+    if (hCircleQueue == CQ_INVALID_HANDLE)
+    {
+        return XRS_CQ_ERR_INVALID_HANDLE;
+    }
+    if (nullptr == pstUserParam)
+    {
+        return 0;
+    }
+
+    DataQueue *pQueue = reinterpret_cast<DataQueue *>(hCircleQueue);
+    User *pUser = pQueue->AddUser();
+    if (nullptr == pUser)
+    {
+        return 0;
+    }
+    pUser->Param() = pstUserParam->stBase;
+    pUser->SetStartPolicy(pstUserParam->enStartPolicy, pstUserParam->s32StartOffsetMs);
+    // MJPEG流默认强制拉取最新节点；但指定了I帧起始策略时（录像场景）需按顺序取流，故不置该标志
+    pUser->SetNewNodeFlag((pstUserParam->stBase.s32Stream == 3 &&
+        CQ_START_NEWEST == pstUserParam->enStartPolicy) ? 1 : 0);
+
     return reinterpret_cast<CQ_USER>(pUser);
 }
 
@@ -126,6 +150,60 @@ int CircleQueue_ReleaseData(CQ_USER hQueueUser, CQ_DATA_S *pstData)
     const std::lock_guard<DataQueue> lock(*pQueue);
     pQueue->ReleaseNode(pUser);
     return XRS_CQ_OK;
+}
+
+//!\brief清空缓冲区（未占用的节点在锁外释放内存，不阻塞调用方）
+int32_t CircleQueue_Clear(CQ_HANDLE hCircleQueue)
+{
+    if (hCircleQueue == CQ_INVALID_HANDLE)
+    {
+        return XRS_CQ_ERR_INVALID_HANDLE;
+    }
+
+    DataQueue *pQueue = reinterpret_cast<DataQueue *>(hCircleQueue);
+    DataQueue::NodeList listFree;
+    {
+        const std::lock_guard<DataQueue> lock(*pQueue);
+        pQueue->Clear(listFree);
+    }
+    // 锁外释放内存，避免长时间占用锁影响数据写入
+    for (auto it = listFree.begin(); it != listFree.end(); it++)
+    {
+        it->FreeMem();
+    }
+    listFree.clear();
+    return XRS_CQ_OK;
+}
+
+//!\brief重置消费者读取进度，并强制释放该消费者当前占用的节点
+int32_t CircleQueue_FlushUser(CQ_USER hQueueUser)
+{
+    if (hQueueUser == CQ_INVALID_USER || hQueueUser == XRS_CQ_ERR_TOOMUCH_USER)
+    {
+        return XRS_CQ_ERR_INVALID_USER;
+    }
+
+    User *pUser = reinterpret_cast<User *>(hQueueUser);
+    DataQueue *pQueue = pUser->Queue();
+    const std::lock_guard<DataQueue> lock(*pQueue);
+    return pQueue->FlushUser(pUser);
+}
+
+//!\brief查询缓冲区状态
+int32_t CircleQueue_GetStatus(CQ_HANDLE hCircleQueue, CQ_STATUS_S *pstStatus)
+{
+    if (hCircleQueue == CQ_INVALID_HANDLE)
+    {
+        return XRS_CQ_ERR_INVALID_HANDLE;
+    }
+    if (nullptr == pstStatus)
+    {
+        return XRS_CQ_ERR_INVALID_PARAM;
+    }
+
+    DataQueue *pQueue = reinterpret_cast<DataQueue *>(hCircleQueue);
+    const std::lock_guard<DataQueue> lock(*pQueue);
+    return pQueue->GetStatus(*pstStatus);
 }
 
 //!\brief设置日志级别
